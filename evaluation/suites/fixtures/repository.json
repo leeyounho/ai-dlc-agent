@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "enabled": true,
+  "github_instance_id": "local-evaluation",
+  "repository_id": 1,
+  "display_name": "fixture/java-example",
+  "intake": {"mode": "all_human_issues"},
+  "model_routing": {"allowed_models": ["alpha", "beta", "text-only"], "default_model": null, "by_purpose": {}},
+  "workflow": {
+    "requirement_approval_required": true,
+    "start_policy": "explicit",
+    "design_mode": "collaborative",
+    "merge_mode": "manual",
+    "required_human_reviews": 1,
+    "deployment_approval": "manual",
+    "parent_approval_covers_children": true,
+    "release_scope": "issue",
+    "allowed_issue_overrides": {"start_policy": ["explicit", "on_approval"], "design_mode": ["collaborative", "automatic"]}
+  },
+  "roles": {
+    "requirement_approver": {"minimum_repository_permission": "write", "actor_ids": [1]},
+    "starter": {"minimum_repository_permission": "write", "actor_ids": [1]},
+    "design_approver": {"minimum_repository_permission": "write", "actor_ids": [1]},
+    "operator": {"minimum_repository_permission": "write", "actor_ids": [1]},
+    "deployment_approver": {"minimum_repository_permission": "write", "actor_ids": [1]}
+  },
+  "project": {
+    "adapter": "java_maven", "toolchain_id": "fixture-java8", "rules_source": "repository",
+    "command_overrides": {}, "junit_report_patterns": ["**/target/surefire-reports/TEST-*.xml"]
+  },
+  "knowledge": {"adr_path_if_absent": "docs/adr", "kb_path_if_absent": "docs/knowledge"},
+  "deployment": {"required_by_default": true, "environment_profile_files": []}
+}

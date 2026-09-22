@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "enabled": false,
+  "github_instance_id": "corp-ghes",
+  "repository_id": 1002,
+  "display_name": "example-org/ai-dlc-agent",
+  "intake": {"mode": "all_human_issues"},
+  "model_routing": {
+    "allowed_models": ["gemma4", "gpt-oss", "deepseek", "gauss"],
+    "default_model": null,
+    "by_purpose": {}
+  },
+  "workflow": {
+    "requirement_approval_required": true,
+    "start_policy": "explicit",
+    "design_mode": "collaborative",
+    "merge_mode": "manual",
+    "required_human_reviews": 1,
+    "deployment_approval": "manual",
+    "parent_approval_covers_children": true,
+    "release_scope": "issue",
+    "allowed_issue_overrides": {
+      "start_policy": ["explicit", "on_approval"],
+      "design_mode": ["collaborative", "automatic"]
+    }
+  },
+  "roles": {
+    "requirement_approver": {"minimum_repository_permission": "write", "actor_ids": []},
+    "starter": {"minimum_repository_permission": "write", "actor_ids": []},
+    "design_approver": {"minimum_repository_permission": "write", "actor_ids": []},
+    "operator": {"minimum_repository_permission": "write", "actor_ids": []},
+    "deployment_approver": {"minimum_repository_permission": "write", "actor_ids": []}
+  },
+  "project": {
+    "adapter": "command",
+    "toolchain_id": "python-approved",
+    "rules_source": "repository",
+    "command_overrides": {
+      "unit_test": {
+        "executable_id": "python",
+        "argv": ["-m", "unittest", "discover", "-s", "tests", "-v"],
+        "cwd": ".",
+        "timeout_seconds": 120,
+        "report_patterns": []
+      },
+      "contract_evaluation": {
+        "executable_id": "python",
+        "argv": ["-m", "ai_dlc", "eval", "run", "--plan", "evaluation/core.plan.json"],
+        "cwd": ".",
+        "timeout_seconds": 120,
+        "report_patterns": ["var/evaluations/*/report.json"]
+      }
+    },
+    "junit_report_patterns": []
+  },
+  "knowledge": {"adr_path_if_absent": "docs/adr", "kb_path_if_absent": "docs/knowledge"},
+  "deployment": {"required_by_default": true, "environment_profile_files": []}
+}

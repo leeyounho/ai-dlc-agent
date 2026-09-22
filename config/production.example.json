@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "profile": "production",
+  "network": {
+    "external_access": false,
+    "internal_hosts": [
+      "github.internal.example",
+      "gemma.internal.example",
+      "gpt-oss.internal.example",
+      "deepseek.internal.example",
+      "gauss.internal.example",
+      "maven.internal.example"
+    ],
+    "external_hosts": [],
+    "follow_redirects": false
+  },
+  "llm": {
+    "providers": {
+      "internal-gemma": {
+        "boundary": "internal",
+        "adapter": "unconfigured",
+        "base_url": "https://gemma.internal.example",
+        "auth": {"type": "unconfigured"},
+        "max_concurrent_requests": 2
+      },
+      "internal-gpt-oss": {
+        "boundary": "internal",
+        "adapter": "unconfigured",
+        "base_url": "https://gpt-oss.internal.example",
+        "auth": {"type": "unconfigured"},
+        "max_concurrent_requests": 2
+      },
+      "internal-deepseek": {
+        "boundary": "internal",
+        "adapter": "unconfigured",
+        "base_url": "https://deepseek.internal.example",
+        "auth": {"type": "unconfigured"},
+        "max_concurrent_requests": 2
+      },
+      "internal-gauss": {
+        "boundary": "internal",
+        "adapter": "unconfigured",
+        "base_url": "https://gauss.internal.example",
+        "auth": {"type": "unconfigured"},
+        "max_concurrent_requests": 2
+      }
+    },
+    "models": {
+      "gemma4": {
+        "provider": "internal-gemma",
+        "model_env": "AI_DLC_GEMMA4_MODEL",
+        "capabilities": {"tool_calls": "unknown", "structured_output": "unknown", "streaming": "unknown"},
+        "context_window_tokens": null,
+        "max_output_tokens": null
+      },
+      "gpt-oss": {
+        "provider": "internal-gpt-oss",
+        "model_env": "AI_DLC_GPT_OSS_MODEL",
+        "capabilities": {"tool_calls": "unknown", "structured_output": "unknown", "streaming": "unknown"},
+        "context_window_tokens": null,
+        "max_output_tokens": null
+      },
+      "deepseek": {
+        "provider": "internal-deepseek",
+        "model_env": "AI_DLC_DEEPSEEK_MODEL",
+        "capabilities": {"tool_calls": "unknown", "structured_output": "unknown", "streaming": "unknown"},
+        "context_window_tokens": null,
+        "max_output_tokens": null
+      },
+      "gauss": {
+        "provider": "internal-gauss",
+        "model_env": "AI_DLC_GAUSS_MODEL",
+        "capabilities": {"tool_calls": "unknown", "structured_output": "unknown", "streaming": "unknown"},
+        "context_window_tokens": null,
+        "max_output_tokens": null
+      }
+    },
+    "routing": {
+      "default_model": "gemma4",
+      "by_purpose": {
+        "requirements": "gemma4",
+        "design": "deepseek",
+        "implementation": "gpt-oss",
+        "test_generation": "gpt-oss",
+        "review": "gauss",
+        "summary": "gemma4",
+        "operations_analysis": "deepseek"
+      }
+    },
+    "failure_policy": "stop"
+  },
+  "maven": {
+    "repository_url": "https://maven.internal.example/repository/maven-public/",
+    "mirror_of": "*",
+    "username_env": "AI_DLC_MAVEN_USERNAME",
+    "password_env": "AI_DLC_MAVEN_PASSWORD",
+    "local_cache_dir": "../var/production/maven-cache"
+  },
+  "workspace": {
+    "root": "../var/production/workspaces"
+  },
+  "storage": {
+    "state_dir": "../var/production/state",
+    "log_dir": "../var/production/logs"
+  }
+}

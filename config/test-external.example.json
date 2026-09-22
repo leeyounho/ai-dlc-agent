@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "profile": "test",
+  "network": {
+    "external_access": true,
+    "internal_hosts": [],
+    "external_hosts": [
+      "api.openai.com",
+      "repo.maven.apache.org"
+    ],
+    "follow_redirects": false
+  },
+  "llm": {
+    "providers": {
+      "external-openai": {
+        "boundary": "external",
+        "adapter": "openai_responses",
+        "base_url": "https://api.openai.com/v1",
+        "auth": {"type": "bearer", "token_env": "AI_DLC_OPENAI_TEST_API_KEY"},
+        "max_concurrent_requests": 2
+      }
+    },
+    "models": {
+      "gpt-test": {
+        "provider": "external-openai",
+        "model_env": "AI_DLC_OPENAI_TEST_MODEL",
+        "capabilities": {"tool_calls": "unknown", "structured_output": "unknown", "streaming": "unknown"},
+        "context_window_tokens": null,
+        "max_output_tokens": null
+      }
+    },
+    "routing": {
+      "default_model": "gpt-test",
+      "by_purpose": {}
+    },
+    "failure_policy": "stop"
+  },
+  "maven": {
+    "repository_url": "https://repo.maven.apache.org/maven2/",
+    "mirror_of": "*",
+    "local_cache_dir": "../var/test-external/maven-cache"
+  },
+  "workspace": {
+    "root": "../var/test-external/workspaces"
+  },
+  "storage": {
+    "state_dir": "../var/test-external/state",
+    "log_dir": "../var/test-external/logs"
+  }
+}

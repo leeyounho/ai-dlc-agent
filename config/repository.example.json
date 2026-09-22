@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "enabled": false,
+  "github_instance_id": "corp-ghes",
+  "repository_id": 1001,
+  "display_name": "example-org/example-java-service",
+  "intake": {
+    "mode": "all_human_issues"
+  },
+  "model_routing": {
+    "allowed_models": ["gemma4", "gpt-oss", "deepseek", "gauss"],
+    "default_model": null,
+    "by_purpose": {}
+  },
+  "workflow": {
+    "requirement_approval_required": true,
+    "start_policy": "explicit",
+    "design_mode": "collaborative",
+    "merge_mode": "manual",
+    "required_human_reviews": 1,
+    "deployment_approval": "manual",
+    "parent_approval_covers_children": true,
+    "release_scope": "issue",
+    "allowed_issue_overrides": {
+      "start_policy": ["explicit", "on_approval"],
+      "design_mode": ["collaborative", "automatic"]
+    }
+  },
+  "roles": {
+    "requirement_approver": {"minimum_repository_permission": "write", "actor_ids": []},
+    "starter": {"minimum_repository_permission": "write", "actor_ids": []},
+    "design_approver": {"minimum_repository_permission": "write", "actor_ids": []},
+    "operator": {"minimum_repository_permission": "write", "actor_ids": []},
+    "deployment_approver": {"minimum_repository_permission": "write", "actor_ids": []}
+  },
+  "project": {
+    "adapter": "java_maven",
+    "toolchain_id": "java8-maven-approved",
+    "rules_source": "repository",
+    "command_overrides": {},
+    "junit_report_patterns": ["**/target/surefire-reports/TEST-*.xml"]
+  },
+  "knowledge": {
+    "adr_path_if_absent": "docs/adr",
+    "kb_path_if_absent": "docs/knowledge"
+  },
+  "deployment": {
+    "required_by_default": true,
+    "environment_profile_files": []
+  }
+}

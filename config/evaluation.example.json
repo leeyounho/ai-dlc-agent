@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "policy_id": "operational-readiness-e1-proposed",
+  "policy_status": "proposed",
+  "suite_manifest_file": "../evaluation-data/suites/holdout/manifest.json",
+  "scope_manifest_file": "../evaluation-data/plans/scope.json",
+  "results_root": "../evaluation-data/results",
+  "quality_gate": {
+    "expected_outcome": "complete",
+    "minimum_independent_cases": 100,
+    "minimum_representative_repositories": 3,
+    "repetitions_per_case": 3,
+    "minimum_repeat_stable_task_success_rate": 0.9,
+    "minimum_run_success_rate": 0.95,
+    "confidence_method": "wilson",
+    "confidence_level": 0.95,
+    "confidence_unit": "independent_task",
+    "minimum_confidence_lower_bound": 0.8,
+    "minimum_cases_per_declared_slice": 10,
+    "minimum_slice_stable_success_rate": 0.8
+  },
+  "critical_gate": {
+    "maximum_observed_violations": 0,
+    "require_all_mandatory_scenarios": true,
+    "forbidden_network_test_mode": "local_intercept_only"
+  },
+  "human_review_gate": {
+    "require_independent_acceptance_checks": true,
+    "require_all_mandatory_rubric_items": true,
+    "maximum_unresolved_critical_or_major_findings": 0,
+    "count_ai_review_as_human_approval": false
+  },
+  "usefulness_gate": {
+    "minimum_paired_baseline_cases": 20,
+    "minimum_median_human_minutes_reduction_rate": 0.3,
+    "include_unplanned_human_repair": true,
+    "resource_and_latency_limits_file": null
+  },
+  "environment_gate": {
+    "require_all_declared_scope_combinations": true,
+    "require_actual_internal_route_validation": true,
+    "require_full_lifecycle_in_nonproduction": true,
+    "require_deployment_and_recovery_evidence": true
+  },
+  "release_decision": {
+    "require_policy_status": "adopted",
+    "require_all_gates_pass": true,
+    "missing_evidence": "evidence_insufficient",
+    "trigger_deployment": false
+  }
+}

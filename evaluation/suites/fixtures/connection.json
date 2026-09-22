@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "profile": "production",
+  "network": {
+    "external_access": false,
+    "internal_hosts": ["models.internal.invalid", "maven.internal.invalid"],
+    "external_hosts": [],
+    "follow_redirects": false
+  },
+  "llm": {
+    "providers": {
+      "internal": {
+        "boundary": "internal",
+        "adapter": "openai_chat_completions",
+        "base_url": "https://models.internal.invalid/v1",
+        "auth": {"type": "bearer", "token_env": "EVAL_MODEL_TOKEN"},
+        "max_concurrent_requests": 2
+      }
+    },
+    "models": {
+      "alpha": {
+        "provider": "internal",
+        "model_env": "EVAL_ALPHA",
+        "capabilities": {"tool_calls": "supported", "structured_output": "unknown", "streaming": "unsupported"},
+        "context_window_tokens": 8192,
+        "max_output_tokens": 2048
+      },
+      "beta": {
+        "provider": "internal",
+        "model_env": "EVAL_BETA",
+        "capabilities": {"tool_calls": "supported", "structured_output": "unknown", "streaming": "unsupported"},
+        "context_window_tokens": 8192,
+        "max_output_tokens": 2048
+      },
+      "text-only": {
+        "provider": "internal",
+        "model_env": "EVAL_TEXT",
+        "capabilities": {"tool_calls": "unsupported", "structured_output": "unknown", "streaming": "unsupported"},
+        "context_window_tokens": 4096,
+        "max_output_tokens": 1024
+      }
+    },
+    "routing": {"default_model": "alpha", "by_purpose": {"design": "beta"}},
+    "failure_policy": "stop"
+  },
+  "maven": {"repository_url": "https://maven.internal.invalid/repository/", "mirror_of": "*", "local_cache_dir": "local-data/cache"},
+  "workspace": {"root": "local-data/workspaces"},
+  "storage": {"state_dir": "local-data/state", "log_dir": "local-data/logs"}
+}

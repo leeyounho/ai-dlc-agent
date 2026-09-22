@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "environment_id": "example-staging",
+  "target_lock_key": "example-service-staging",
+  "adapter": "command",
+  "command_profile_id": "approved-example-deployer",
+  "allowed_endpoints": ["https://service-staging.internal.example"],
+  "credential_env": "AI_DLC_EXAMPLE_DEPLOYMENT_CREDENTIAL",
+  "prerequisites": ["release_verified", "artifact_digest_matches", "environment_generation_matches"],
+  "apply_timeout_seconds": 900,
+  "inspect_interval_seconds": 10,
+  "verify_checks": [
+    {
+      "id": "health-and-version",
+      "kind": "http_json",
+      "url": "https://service-staging.internal.example/health",
+      "expected_status": 200,
+      "health_field": "status",
+      "healthy_value": "healthy",
+      "release_id_field": "release_id",
+      "timeout_seconds": 5,
+      "consecutive_successes": 3
+    }
+  ],
+  "stabilization_window_seconds": 60,
+  "rollback_mode": "manual",
+  "rollback_profile_id": "approved-example-rollback",
+  "migration_policy": "none",
+  "observation": {
+    "interval_seconds": 60,
+    "incident_failure_threshold": 3,
+    "create_followup_issue": true
+  }
+}

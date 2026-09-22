@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "connection_profile_file": "production.example.json",
+  "github": {
+    "instance_id": "corp-ghes",
+    "web_base_url": "https://github.internal.example",
+    "api_base_url": "https://github.internal.example/api/v3",
+    "app_id_env": "AI_DLC_GITHUB_APP_ID",
+    "private_key_file": "../secrets/github-app.pem",
+    "webhook_secret_env": "AI_DLC_GITHUB_WEBHOOK_SECRET"
+  },
+  "web": {
+    "bind_host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://agent.internal.example",
+    "tls_mode": "reverse_proxy",
+    "trusted_proxy_cidrs": ["127.0.0.1/32"],
+    "identity_adapter": "ghes_user",
+    "client_id_env": "AI_DLC_GITHUB_USER_CLIENT_ID",
+    "client_secret_env": "AI_DLC_GITHUB_USER_CLIENT_SECRET",
+    "session_absolute_seconds": 28800,
+    "session_idle_seconds": 1800,
+    "permission_cache_seconds": 60,
+    "sse_heartbeat_seconds": 15,
+    "poll_interval_seconds": 10
+  },
+  "execution": {
+    "runner_pool_profile_file": "../runtime/runner-pool.json",
+    "toolchains_profile_file": "../runtime/toolchains.json",
+    "egress_profile_file": "../runtime/egress.json",
+    "artifact_root": "../var/production/artifacts",
+    "global_concurrency": 2,
+    "repository_concurrency": 1,
+    "model_concurrency": 2
+  },
+  "limits": {
+    "model_calls_per_run": 80,
+    "tool_calls_per_run": 200,
+    "repair_iterations": 3,
+    "model_timeout_seconds": 120,
+    "command_timeout_seconds": 1800,
+    "active_run_timeout_seconds": 7200,
+    "command_termination_grace_seconds": 10,
+    "log_bytes_per_run": 104857600
+  },
+  "repository_profile_files": ["repository.example.json"]
+}
