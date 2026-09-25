@@ -2,7 +2,7 @@
 
 상태: 현재 합의에 기반한 구현 기준. 구현이나 실제 환경에서의 호환성 검증이 완료되었다는 의미는 아니다.
 
-구현 상태: connection/repository/service 설정·readiness와 공통 HTTPS transport, 모델 선택, 요구사항/설계 승인·파일 저널/복구에 더해 로컬 source snapshot·command 실행/중단/복구·JUnit 검증을 구현했다. [README.md](README.md), [transport 구현 계약](TRANSPORT_IMPLEMENTATION.md), [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 계약](EXECUTION_IMPLEMENTATION.md)에 실행 방법과 실제 미구현 범위를 기록한다. 외부 의존성이 없는 이 핵심 모듈은 immutable dataclass와 strict 검증 함수를 사용한다. 실제 HTTP 검증은 loopback TLS fixture, 프로세스 검증은 내장 합성 프로그램에 한정하며 FastAPI/Pydantic, 실제 API/운영 OS runner는 후속 작업이다.
+구현 상태: connection/repository/service 설정·readiness와 공통 HTTPS transport, 모델 선택, 요구사항/설계 승인·파일 저널/복구에 더해 로컬 source snapshot·repository 규칙/실행 프로필/ADR·KB 탐색·command 실행/중단/복구·JUnit 검증을 구현했다. [README.md](README.md), [transport 구현 계약](TRANSPORT_IMPLEMENTATION.md), [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [repository discovery](REPOSITORY_DISCOVERY_IMPLEMENTATION.md), [실행 구현 계약](EXECUTION_IMPLEMENTATION.md)에 실행 방법과 실제 미구현 범위를 기록한다. 외부 의존성이 없는 이 핵심 모듈은 immutable dataclass와 strict 검증 함수를 사용한다. 실제 HTTP 검증은 loopback TLS fixture, 프로세스 검증은 내장 합성 프로그램에 한정하며 FastAPI/Pydantic, 실제 API/운영 OS runner는 후속 작업이다.
 
 ## 1. 문서의 위치와 확정 범위
 
@@ -201,7 +201,7 @@ App JWT·installation token은 제어 프로세스가 필요 시 획득한다. �
 
 ## 9. 저장소 규칙과 설정
 
-AI-DLC의 단계·승인·모델 도구·문서 모델은 언어 독립적이다. 실행은 공통 ExecutionPort에 repository별 toolchain·argv 명령·cwd·환경 참조·보고서 해석기·인수 조건을 전달한다. Maven 자동 탐색/설정이나 JUnit 파서는 선택적인 build tool 보조 기능이다. 새 언어마다 별도 Agent 또는 언어 전용 실행기를 필수로 추가하지 않는다. loader는 java_maven과 공통 command profile을 지원하며 command coordinator·JUnit parser는 구현했다. 운영 runtime 연결은 후속이다. 언어 중립적 구조가 준비되어도 필요한 SDK·OS·실제 검증 없이 모든 프로젝트가 실행 가능하다고 주장하지 않는다.
+AI-DLC의 단계·승인·모델 도구·문서 모델은 언어 독립적이다. 실행은 공통 ExecutionPort에 repository별 toolchain·argv 명령·cwd·환경 참조·보고서 해석기·인수 조건을 전달한다. Maven 자동 탐색/설정이나 JUnit 파서는 선택적인 build tool 보조 기능이다. 새 언어마다 별도 Agent 또는 언어 전용 실행기를 필수로 추가하지 않는다. loader는 java_maven과 공통 command profile을 지원하고 repository discovery, command coordinator, JUnit parser를 구현했다. 운영 runtime 연결은 후속이다. 언어 중립적 구조가 준비되어도 필요한 SDK·OS·실제 검증 없이 C#을 포함한 모든 프로젝트가 실행 가능하다고 주장하지 않는다.
 
 설정은 세 종류다.
 

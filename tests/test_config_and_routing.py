@@ -178,10 +178,14 @@ class ConfigAndRoutingTests(unittest.TestCase):
 
     def test_generic_commands_do_not_require_junit_or_a_language_name(self):
         self.repo_raw["project"].update(adapter="command", toolchain_id="approved-sdk", junit_report_patterns=[])
-        profile = parse_repository(self.repo_raw, connection=self.config()).project
+        repository = parse_repository(self.repo_raw, connection=self.config())
+        profile = repository.project
         self.assertEqual(profile.adapter, "command")
+        self.assertEqual(profile.rules_source, "repository")
         self.assertEqual(profile.junit_report_patterns, ())
         self.assertEqual(dict(profile.commands), {})  # discovery is still pending, not execution-ready
+        self.assertEqual(repository.knowledge.adr_path_if_absent, "docs/adr")
+        self.assertEqual(repository.knowledge.kb_path_if_absent, "docs/knowledge")
         self.repo_raw["project"]["adapter"] = "java_maven"
         self.assert_code("CONFIG_TYPE", lambda: parse_repository(self.repo_raw, connection=self.config()))
 

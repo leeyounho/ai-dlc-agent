@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
 from pathlib import Path
 from typing import Mapping
@@ -201,6 +201,13 @@ class ProjectProfile:
     toolchain_id: str
     commands: Mapping[str, CommandProfile]
     junit_report_patterns: tuple[str, ...]
+    rules_source: str = "repository"
+
+
+@dataclass(frozen=True)
+class KnowledgeConfig:
+    adr_path_if_absent: str = "docs/adr"
+    kb_path_if_absent: str = "docs/knowledge"
 
 
 @dataclass(frozen=True)
@@ -214,3 +221,4 @@ class RepositoryConfig:
     workflow: WorkflowPolicy
     roles: Mapping[str, frozenset[int]]
     project: ProjectProfile
+    knowledge: KnowledgeConfig = field(default_factory=KnowledgeConfig)
