@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import os
 from pathlib import Path
 import shutil
+import stat
 import uuid
 
 
@@ -22,4 +23,7 @@ def temporary_directory():
         # Convert only the already-verified local target, so Windows can remove
         # nested long names without following an untrusted device/UNC input.
         native = "\\\\?\\" + str(resolved) if os.name == "nt" else resolved
-        shutil.rmtree(native)
+        def make_writable(function, path, _error):
+            os.chmod(path, stat.S_IRWXU)
+            function(path)
+        shutil.rmtree(native, onexc=make_writable)
