@@ -138,8 +138,8 @@ def read_json(path: Path) -> dict:
     return decode_json(raw)
 
 
-def decode_json(raw: bytes) -> dict:
-    """Decode bounded JSON bytes after the caller has enforced its I/O boundary."""
+def decode_json_value(raw: bytes):
+    """Decode a bounded JSON value after the caller has enforced its I/O boundary."""
     if len(raw) > MAX_JSON_BYTES:
         raise AgentError("CONFIG_SIZE", "JSON file exceeds the size limit.")
     try:
@@ -147,6 +147,12 @@ def decode_json(raw: bytes) -> dict:
                           parse_constant=_invalid_constant)
     except (ValueError, UnicodeError, RecursionError):
         raise AgentError("CONFIG_JSON", "Invalid JSON document.") from None
+    return data
+
+
+def decode_json(raw: bytes) -> dict:
+    """Decode a bounded JSON object after the caller has enforced its I/O boundary."""
+    data = decode_json_value(raw)
     if type(data) is not dict:
         fail("CONFIG_TYPE", "$", "Expected a JSON object.")
     return data

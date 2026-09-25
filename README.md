@@ -1,6 +1,6 @@
 # AI-DLC Agent
 
-사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한 관측 adapter, 단일 상시 실행 서비스·공정 스케줄러·HTTP webhook/health route, 정확한 Git commit checkout과 제한된 파일 도구, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험, LLM adapter 연결·Git branch/PR 게시·운영용 실행 격리·배포는 후속 범위입니다.
+사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한·branch policy 관측 adapter, 단일 상시 실행 서비스·공정 스케줄러·HTTP webhook/health route, 정확한 Git commit checkout과 제한된 파일 도구, repository 규칙·실행 프로필·ADR/KB 문맥 탐색, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험, LLM adapter 연결·Git branch/PR 게시·운영용 실행 격리·배포는 후속 범위입니다.
 
 ## 실행
 
@@ -61,6 +61,7 @@ python -m ai_dlc eval compare --baseline <previous-report-directory> --candidate
 - [storage](ai_dlc/storage/journal.py): 단일 인스턴스 잠금, task별 CAS·중복 이벤트 방지, immutable blob·저널·파생 snapshot 복구.
 - [execution](ai_dlc/execution/coordinator.py): 승인·source/runtime digest에 묶인 command intent, 재전달 중복 방지, 중단·복구, source 변경 확인·JUnit 검증. 기본 runner는 미구성 차단이며 실제 프로세스 시험에는 내장 합성 runner만 사용합니다.
 - [workspace](ai_dlc/execution/git_workspace.py): 전역 Git 설정·hook·filter·credential을 상속하지 않는 commit/tree 확정, `.git` 없는 작업 공간과 tracked mode manifest. 제한된 파일 도구와 경계는 [구현 계약](WORKSPACE_IMPLEMENTATION.md)을 참고합니다.
+- [repositories](ai_dlc/repositories/): 고정 commit의 README·AGENTS·build/workflow·CODEOWNERS와 GitHub branch policy를 출처와 함께 수집하고, 운영자 toolchain 상한 안에서 Maven/공통 command 실행 프로필을 제안합니다. ADR/KB는 commit/path/digest를 유지해 설계·리뷰 문맥만 선별하며 새 기록은 Git 변경 제안으로 만듭니다. [구현 계약](REPOSITORY_DISCOVERY_IMPLEMENTATION.md)을 참고합니다.
 - [service](ai_dlc/service/): 단일 프로세스 lifecycle, durable inbox 소비, 저장소별 공정 스케줄링, 동시성 한도, restart checkpoint, graceful shutdown, webhook 및 health HTTP route.
 - [evaluation](ai_dlc/evaluation/runner.py): 사례 실행·평가 근거·JSON/Markdown 보고서·회귀 비교.
 - [tests](tests/test_config_and_routing.py): 표준 unittest 기반 테스트. 후속 pytest에서도 실행 가능한 구조입니다.

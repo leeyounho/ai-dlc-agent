@@ -33,6 +33,16 @@ class RepositoryBinding:
         return quote(owner, safe="") + "/" + quote(name, safe="")
 
 
+@dataclass(frozen=True)
+class RepositoryPolicyObservation:
+    default_branch: str
+    protected: bool
+    required_status_checks: tuple[str, ...]
+    required_approving_reviews: int
+    require_code_owner_reviews: bool
+    rulesets: tuple[tuple[str, str, str], ...]
+
+
 class GitHubApiClient:
     def __init__(self, binding: RepositoryBinding, authenticator: GitHubAppAuthenticator,
                  http: GitHubHttp):
@@ -50,9 +60,9 @@ class GitHubApiClient:
                                                       self.binding.repository_id)
         return "Bearer " + token.token
 
-    def _get(self, path, *, not_found=False):
+    def _get(self, path, *, not_found=False, response_type="object"):
         return self.http.request_json("GET", path, authorization=self._authorization(),
-                                      not_found=not_found)
+                                      not_found=not_found, response_type=response_type)
 
     def verify_repository_scope(self):
         repository = self._get(f"/repos/{self.binding.path}")
@@ -65,6 +75,48 @@ class GitHubApiClient:
         except (KeyError, TypeError, ValueError):
             raise AgentError("GITHUB_PROTOCOL", "GitHub repository identity response is invalid.") from None
         return repository
+
+    def repository_policy(self) -> RepositoryPolicyObservation:
+        """Read branch controls as evidence; this never changes repository policy."""
+        repository = self.verify_repository_scope()
+        branch = repository.get("default_branch")
+        if (type(branch) is not str or not branch or len(branch) > 255
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", branch)
+                or ".." in branch or branch.endswith(("/", ".lock"))):
+            raise AgentError("GITHUB_PROTOCOL", "GitHub default branch response is invalid.")
+        protection = self._get(
+            f"/repos/{self.binding.path}/branches/{quote(branch, safe='')}/protection",
+            not_found=True,
+        )
+        checks, reviews, owners = (), 0, False
+        if protection is not None:
+            try:
+                contexts = protection.get("required_status_checks") or {}
+                contexts = contexts.get("contexts") or []
+                if type(contexts) is not list or any(type(item) is not str or not item for item in contexts):
+                    raise ValueError
+                review = protection.get("required_pull_request_reviews") or {}
+                reviews = review.get("required_approving_review_count", 0)
+                owners = review.get("require_code_owner_reviews", False)
+                if type(reviews) is not int or reviews < 0 or type(owners) is not bool:
+                    raise ValueError
+                checks = tuple(sorted(set(contexts)))
+            except (AttributeError, TypeError, ValueError):
+                raise AgentError("GITHUB_PROTOCOL", "GitHub branch protection response is invalid.") from None
+        raw_rulesets = self._get(f"/repos/{self.binding.path}/rulesets", not_found=True,
+                                 response_type="array")
+        rulesets = []
+        for item in raw_rulesets or []:
+            try:
+                name, enforcement, target = item["name"], item["enforcement"], item.get("target", "branch")
+                if (not all(type(value) is str and value for value in (name, enforcement, target))
+                        or len(name) > 255):
+                    raise ValueError
+            except (KeyError, TypeError, ValueError):
+                raise AgentError("GITHUB_PROTOCOL", "GitHub ruleset response is invalid.") from None
+            rulesets.append((name, enforcement, target))
+        return RepositoryPolicyObservation(branch, protection is not None, checks, reviews, owners,
+                                           tuple(sorted(set(rulesets))))
 
     def issue(self, task: TaskKey) -> IssueObservation:
         self._key(task)

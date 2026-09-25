@@ -194,6 +194,19 @@ class GitHubHttpTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "GITHUB_CAPABILITY_UNAVAILABLE")
         self.assertNotIn("secret", str(caught.exception.as_dict()).lower())
 
+    def test_array_response_is_explicit_and_wrong_shape_fails_closed(self):
+        transport = FakeTransport(HttpResponse(200, {}, b'[{"name":"rules"}]'),
+                                  HttpResponse(200, {}, b'{"not":"an-array"}'))
+        http = GitHubHttp("https://github.internal.example/api/v3", transport)
+        self.assertEqual([{"name": "rules"}], http.request_json(
+            "GET", "/repos/acme/service/rulesets", authorization="Bearer SECRET",
+            response_type="array",
+        ))
+        with self.assertRaises(AgentError) as caught:
+            http.request_json("GET", "/repos/acme/service/rulesets", authorization="Bearer SECRET",
+                              response_type="array")
+        self.assertEqual("GITHUB_PROTOCOL", caught.exception.code)
+
 
 class WebhookInboxTests(unittest.TestCase):
     def setUp(self):

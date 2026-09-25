@@ -63,10 +63,10 @@ provider 인증은 unconfigured/none/bearer/header로 분리하고 복합 인증
 - model_routing은 allowed_models(등록된 model ID 배열), default_model(해당 배열의 model ID 또는 null), by_purpose(허용된 목적과 model ID의 map)로 구성한다. null/빈 map은 전역 route 상속이다. repo purpose → repo default → global purpose → global default 순으로 선택한 뒤 allowed_models를 검사한다. 외부 테스트 repo profile은 테스트 registry의 model ID를 사용하며 운영 model 목록을 자동 병합하지 않는다.
 - workflow의 enum·기본값은 [작업 계약](../WORKFLOW_SPEC.md) §1을 따른다. requirement_approval_required는 true만 지원. required_human_reviews는 0 이상. allowed_issue_overrides는 start_policy/design_mode 값의 부분집합만 허용한다.
 - roles의 다섯 필드는 `minimum_repository_permission=write`, `actor_ids=양의 정수 배열` 형태. 실제 실행에는 GHES 권한과 ID allowlist를 모두 확인한다. 읽기/일반 기여 역할은 작업 계약의 기본 정책을 따른다.
-- project.adapter는 java_maven / command, rules_source는 repository. command는 개발 언어와 무관하게 저장소별 명령을 표현한다. toolchain_id는 설치 profile의 ID. command_overrides는 command ID를 key로 하는 객체이며 비어 있으면 실제 repo 규칙에서 발견한 계획을 사용한다. 설정 DTO/검증과 공통 command coordinator를 구현했으며 repo 규칙 자동 탐색·운영 runner의 실제 실행은 후속 범위다.
+- project.adapter는 java_maven / command, rules_source는 repository. command는 개발 언어와 무관하게 저장소별 명령을 표현한다. toolchain_id는 설치 profile의 ID. command_overrides는 command ID를 key로 하는 객체이며 비어 있으면 repository discovery가 근거와 확인 필요 사유를 포함한 계획을 제안한다. 설정 DTO는 rules_source와 knowledge 경로를 보존한다. 발견 결과는 운영자 toolchain의 executable/network 상한을 넓히지 않으며 실제 운영 runner 실행은 후속 범위다.
 - 각 command override는 `executable_id`, `argv` 문자열 배열, `cwd` workspace 상대 경로, `timeout_seconds`, `report_patterns`로 정의한다. executable_id는 등록된 toolchain 내 ID다. shell 문자열·secret 삽입·제어 파일 경로는 허용하지 않는다. 문자열 인자의 `${...}` 등은 자동 치환하지 않으며 동적 인자는 별도 typed API로 전달한다.
 - junit_report_patterns는 작업 공간 내 상대 glob 배열. java_maven에서는 하나 이상 필요하고 command에서는 비어 있어도 된다. 실제 plugin/profile의 보고서 경로와 맞추고 필요한 보고서 누락을 성공 처리하지 않는다. 다른 검증 도구는 별도 결과 해석을 연결한다.
-- knowledge 경로는 workspace 상대 경로, `.git` 및 제어 영역 제외. 기존 ADR/KB 위치를 먼저 탐색한다.
+- knowledge 경로는 workspace 상대 경로, `.git` 및 제어 영역 제외. 기존 ADR/KB 위치를 먼저 탐색하고 없을 때만 설정 경로를 새 Git 변경 제안 위치로 사용한다. 설계·리뷰 문맥 항목은 commit/path/digest를 보존한다.
 - deployment.required_by_default는 boolean, environment_profile_files는 파일 배열. required=true인데 환경이 없으면 배포 미구성으로 표시하며 운영 준비 실패다.
 
 enabled=false인 예시는 실제 repo ID·승인 담당자·배포 환경을 아직 채우지 않았음을 의미한다. reader/approver에게 자동 권한을 부여하는 예시가 아니다. Java build command를 예제 하나로 고정하지 않도록 command_overrides는 비워 두었다.

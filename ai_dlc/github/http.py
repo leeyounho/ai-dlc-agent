@@ -6,7 +6,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from ..errors import AgentError
 from ..transport import HttpRequest, HttpTransport
-from ..validation import decode_json
+from ..validation import decode_json_value
 
 
 class GitHubHttp:
@@ -19,7 +19,9 @@ class GitHubHttp:
         self.api_version = api_version
 
     def request_json(self, method: str, path: str, *, authorization: str, body: dict | None = None,
-                     not_found: bool = False) -> dict | None:
+                     not_found: bool = False, response_type: str = "object"):
+        if response_type not in {"object", "array"}:
+            raise AgentError("GITHUB_REQUEST", "GitHub response type is invalid.")
         if (type(path) is not str or not path.startswith("/") or not path.isascii()
                 or "\\" in path or "?" in path or "#" in path or not re.fullmatch(r"/[A-Za-z0-9_./%~-]+", path)):
             raise AgentError("GITHUB_REQUEST", "GitHub API path is invalid.")
@@ -52,6 +54,10 @@ class GitHubHttp:
         if response.status < 200 or response.status >= 300:
             raise AgentError("GITHUB_PROTOCOL", "GitHub API returned an unexpected status.")
         try:
-            return decode_json(response.body)
+            value = decode_json_value(response.body)
+            expected = dict if response_type == "object" else list
+            if type(value) is not expected:
+                raise AgentError("CONFIG_TYPE", "Unexpected JSON response type.")
+            return value
         except AgentError:
-            raise AgentError("GITHUB_PROTOCOL", "GitHub API returned an invalid JSON object.") from None
+            raise AgentError("GITHUB_PROTOCOL", "GitHub API returned an invalid JSON document.") from None

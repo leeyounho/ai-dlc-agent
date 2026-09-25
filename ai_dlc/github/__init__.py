@@ -1,12 +1,13 @@
 """Trusted GitHub App, webhook, and observation adapters."""
 
 from .auth import GitHubAppAuthenticator
-from .client import GitHubApiClient, RepositoryBinding
+from .client import GitHubApiClient, RepositoryBinding, RepositoryPolicyObservation
 from .endpoint import GitHubWebhookEndpoint, WebhookHttpResponse
 from .inbox import WebhookInbox
 from .processor import GitHubEventProcessor
 from .webhook import GitHubWebhookReceiver
 
 __all__ = ["GitHubApiClient", "GitHubAppAuthenticator", "GitHubEventProcessor",
+           "RepositoryPolicyObservation",
            "GitHubWebhookEndpoint", "GitHubWebhookReceiver", "RepositoryBinding",
            "WebhookHttpResponse", "WebhookInbox"]

@@ -11,7 +11,7 @@ from ..errors import AgentError
 from .network import authorize_host, authorize_url, normalize_host, url_host
 from .types import (AuthConfig, CommandProfile, ConfigurationReadiness, ConnectionConfig,
                     ExecutionServiceConfig, GitHubServiceConfig, Model, NetworkConfig,
-                    ProjectProfile, Provider, PURPOSES, RepositoryConfig, Routes,
+                    KnowledgeConfig, ProjectProfile, Provider, PURPOSES, RepositoryConfig, Routes,
                     ServiceBundle, ServiceConfig, ServiceLimits, TlsConfig, TransportConfig,
                     TransportRoute, WebConfig, WorkflowPolicy)
 
@@ -231,8 +231,10 @@ def parse_repository(raw: dict, *, connection: ConnectionConfig) -> RepositoryCo
                             frozenset(overrides["design_mode"]))
     role_ids = MappingProxyType({role: frozenset(value["actor_ids"]) for role, value in roles.items()})
     execution = ProjectProfile(adapter, project["toolchain_id"], MappingProxyType(commands),
-                               tuple(project["junit_report_patterns"]))
-    return RepositoryConfig(enabled, instance, rid, allowed, routing, v.canonical_digest(raw), policy, role_ids, execution)
+                               tuple(project["junit_report_patterns"]), project["rules_source"])
+    knowledge = KnowledgeConfig(k["adr_path_if_absent"], k["kb_path_if_absent"])
+    return RepositoryConfig(enabled, instance, rid, allowed, routing, v.canonical_digest(raw), policy,
+                            role_ids, execution, knowledge)
 
 
 def load_connection(path: Path) -> ConnectionConfig:
