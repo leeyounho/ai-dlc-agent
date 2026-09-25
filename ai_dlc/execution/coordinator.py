@@ -99,7 +99,7 @@ class ExecutionCoordinator:
     def _result(self, result):
         if type(result) is not ProcessResult or type(result.exit_code) is not int:
             raise AgentError("RUNNER_PROTOCOL", "Runner returned an invalid process outcome.")
-        v.enum(result.termination, {"completed", "cancelled", "timeout", "output_limit"}, "termination")
+        v.enum(result.termination, {"completed", "cancelled", "timeout", "output_limit", "resource_limit"}, "termination")
         for digest in (result.stdout_sha256, result.stderr_sha256):
             self._digest(digest)
         v.integer(result.stdout_bytes, "stdout_bytes", minimum=0)

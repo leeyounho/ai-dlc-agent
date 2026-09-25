@@ -63,7 +63,7 @@ provider 인증은 unconfigured/none/bearer/header로 분리하고 복합 인증
 - model_routing은 allowed_models(등록된 model ID 배열), default_model(해당 배열의 model ID 또는 null), by_purpose(허용된 목적과 model ID의 map)로 구성한다. null/빈 map은 전역 route 상속이다. repo purpose → repo default → global purpose → global default 순으로 선택한 뒤 allowed_models를 검사한다. 외부 테스트 repo profile은 테스트 registry의 model ID를 사용하며 운영 model 목록을 자동 병합하지 않는다.
 - workflow의 enum·기본값은 [작업 계약](../WORKFLOW_SPEC.md) §1을 따른다. requirement_approval_required는 true만 지원. required_human_reviews는 0 이상. allowed_issue_overrides는 start_policy/design_mode 값의 부분집합만 허용한다.
 - roles의 다섯 필드는 `minimum_repository_permission=write`, `actor_ids=양의 정수 배열` 형태. 실제 실행에는 GHES 권한과 ID allowlist를 모두 확인한다. 읽기/일반 기여 역할은 작업 계약의 기본 정책을 따른다.
-- project.adapter는 java_maven / command, rules_source는 repository. command는 개발 언어와 무관하게 저장소별 명령을 표현한다. toolchain_id는 설치 profile의 ID. command_overrides는 command ID를 key로 하는 객체이며 비어 있으면 repository discovery가 근거와 확인 필요 사유를 포함한 계획을 제안한다. 설정 DTO는 rules_source와 knowledge 경로를 보존한다. 발견 결과는 운영자 toolchain의 executable/network 상한을 넓히지 않으며 실제 운영 runner 실행은 후속 범위다.
+- project.adapter는 java_maven / command, rules_source는 repository. command는 개발 언어와 무관하게 저장소별 명령을 표현한다. toolchain_id는 설치 profile의 ID. command_overrides는 command ID를 key로 하는 객체이며 비어 있으면 repository discovery가 근거와 확인 필요 사유를 포함한 계획을 제안한다. 설정 DTO는 rules_source와 knowledge 경로를 보존한다. 발견 결과는 운영자 toolchain의 executable/network 상한을 넓히지 않으며, InstalledRunner는 동일 command/toolchain이 verified runtime profile에 정확히 등록된 경우에만 helper로 전달한다.
 - 각 command override는 `executable_id`, `argv` 문자열 배열, `cwd` workspace 상대 경로, `timeout_seconds`, `report_patterns`로 정의한다. executable_id는 등록된 toolchain 내 ID다. shell 문자열·secret 삽입·제어 파일 경로는 허용하지 않는다. 문자열 인자의 `${...}` 등은 자동 치환하지 않으며 동적 인자는 별도 typed API로 전달한다.
 - junit_report_patterns는 작업 공간 내 상대 glob 배열. java_maven에서는 하나 이상 필요하고 command에서는 비어 있어도 된다. 실제 plugin/profile의 보고서 경로와 맞추고 필요한 보고서 누락을 성공 처리하지 않는다. 다른 검증 도구는 별도 결과 해석을 연결한다.
 - knowledge 경로는 workspace 상대 경로, `.git` 및 제어 영역 제외. 기존 ADR/KB 위치를 먼저 탐색하고 없을 때만 설정 경로를 새 Git 변경 제안 위치로 사용한다. 설계·리뷰 문맥 항목은 commit/path/digest를 보존한다.
@@ -96,12 +96,12 @@ verify의 기대 release ID는 사용자가 댓글에 적은 임의 값이 아�
 
 | profile | 필수 구성 |
 | --- | --- |
-| runner-pool | schema_version, profile_id, OS/CPU identity, 고정 launcher 경로/digest, UID/GID pool, workspace roots, resource limits, uid별 egress profile ID |
-| toolchains | schema_version, 각 toolchain ID의 java_home/java_version, maven executable/version, Git executable/version, CA/truststore 참조, 허용 executable IDs |
-| egress | schema_version, profile ID별 주체(control/model/publisher/runner/deployer), 허용 scheme/host/address/port, 내부 DNS·proxy route, OS enforcement 근거 |
-| command profiles | schema_version, 각 ID의 root/관리자 소유 executable 경로/digest, 고정 argv, typed stdin schema, credential/egress scope, timeout, stdout schema, 지원 apply/inspect/verify/rollback 동작 |
+| runner-pool | schema 1, RHEL 7/8/9·CPU·cgroup/network 방식, 고정 helper 경로/digest와 검증 evidence, 고유 UID/GID/home slot, workspace/protected roots, CPU/memory/process/file/output/disk 한도, slot별 egress profile ID |
+| toolchains | schema 1, platform/egress ID, root 소유 executable 경로/digest/version, command별 exact argv/cwd/최대 timeout/resource/verification/report/generated patterns, Maven settings/truststore/per-run cache/credential profile 참조 |
+| egress | schema 1, production/test와 runner 주체, default deny, controlled/disabled DNS, proxy none, 허용 scheme/host/address/port/purpose/boundary, OS enforcement evidence |
+| helper protocol | protocol v1의 preflight/start/inspect/cancel. run token·PID start ticks·cgroup·UID/resource/egress identity와 process tree/잔류 process/UID 재사용 결과 |
 
-예시의 미제공 profile 참조는 사용자에게 API 규격을 추측하라는 요구가 아니다. 설치 담당자가 내부 자료·실행 도구를 확인하고 채울 연결점이다. 공통 schema와 동작 코드는 먼저 구현 가능하다.
+[runtime 예시](../runtime/)의 zero digest와 unverified 상태는 사용자에게 값을 추측하라는 요구가 아니다. 설치 담당자가 실제 helper/toolchain/OS 정책을 확인하고 evidence를 생성해야 하며, 그대로는 runner availability와 service readiness가 실패한다. native helper는 같은 배포 패키지의 root 소유 artifact여야 하고 범용 shell/sudo 권한으로 대체하지 않는다.
 
 ## 6. 검증 단계
 

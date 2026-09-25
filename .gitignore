@@ -7,7 +7,8 @@ build/
 dist/
 var/
 secrets/
-runtime/
+runtime/*
+!runtime/*.example.json
 .env
 .env.*
 !.env.example

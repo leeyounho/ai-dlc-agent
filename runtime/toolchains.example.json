@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "profile_id": "rhel-toolchains-example",
+  "toolchains": {
+    "python-approved": {
+      "platform_ids": ["rhel7-x86_64", "rhel8-x86_64-cgroup1", "rhel9-x86_64"],
+      "egress_profile_ids": ["runner-offline"],
+      "executables": {
+        "python": {"path": "/opt/ai-dlc/runtime/python/bin/python3", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version": "UNVERIFIED-3.12"}
+      },
+      "commands": {
+        "unit_test": {
+          "executable_id": "python",
+          "argv": ["-m", "unittest", "discover", "-s", "tests", "-v"],
+          "cwd": ".",
+          "timeout_seconds": 120,
+          "resource_profile_id": "python-test",
+          "verification": "exit_code",
+          "report_patterns": [],
+          "generated_patterns": []
+        },
+        "contract_evaluation": {
+          "executable_id": "python",
+          "argv": ["-m", "ai_dlc", "eval", "run", "--plan", "evaluation/core.plan.json"],
+          "cwd": ".",
+          "timeout_seconds": 120,
+          "resource_profile_id": "python-test",
+          "verification": "exit_code",
+          "report_patterns": ["var/evaluations/*/report.json"],
+          "generated_patterns": ["var/evaluations/**"]
+        }
+      }
+    },
+    "java8-maven-approved": {
+      "platform_ids": ["rhel7-x86_64", "rhel8-x86_64-cgroup1", "rhel9-x86_64"],
+      "egress_profile_ids": ["runner-maven-internal"],
+      "executables": {
+        "java8": {"path": "/opt/ai-dlc/runtime/jdk8/bin/java", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version": "UNVERIFIED-JAVA-8"},
+        "maven": {"path": "/opt/ai-dlc/runtime/maven/bin/mvn", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version": "UNVERIFIED-3.9"}
+      },
+      "commands": {
+        "unit_test": {
+          "executable_id": "maven",
+          "argv": ["-B", "test"],
+          "cwd": ".",
+          "timeout_seconds": 900,
+          "resource_profile_id": "java-test",
+          "verification": "junit",
+          "report_patterns": ["**/target/surefire-reports/TEST-*.xml"],
+          "generated_patterns": ["**/target/**"]
+        }
+      },
+      "maven": {
+        "settings_file": "/opt/ai-dlc/runtime/maven/settings.xml",
+        "settings_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "truststore_file": "/opt/ai-dlc/runtime/jdk8/jre/lib/security/cacerts",
+        "truststore_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cache_mode": "per_run",
+        "credential_profile_id": "maven-readonly"
+      }
+    }
+  }
+}
