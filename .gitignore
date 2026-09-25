@@ -13,4 +13,6 @@ runtime/
 !.env.example
 *.pem
 *.key
+!tests/fixtures/localhost-cert.pem
+!tests/fixtures/localhost-key.pem
 config/*.local.json

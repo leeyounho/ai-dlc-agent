@@ -33,6 +33,23 @@
     "repository_concurrency": 1,
     "model_concurrency": 2
   },
+  "transport": {
+    "tls": {"mode": "system"},
+    "proxy": {"mode": "none"},
+    "dns_mode": "system",
+    "routes": [
+      {"host": "github.internal.example", "port": 443, "address_ranges": []},
+      {"host": "gemma.internal.example", "port": 443, "address_ranges": []},
+      {"host": "gpt-oss.internal.example", "port": 443, "address_ranges": []},
+      {"host": "deepseek.internal.example", "port": 443, "address_ranges": []},
+      {"host": "gauss.internal.example", "port": 443, "address_ranges": []},
+      {"host": "maven.internal.example", "port": 443, "address_ranges": []}
+    ],
+    "connect_timeout_seconds": 10,
+    "read_timeout_seconds": 120,
+    "max_response_bytes": 10485760,
+    "read_retry_attempts": 3
+  },
   "limits": {
     "model_calls_per_run": 80,
     "tool_calls_per_run": 200,

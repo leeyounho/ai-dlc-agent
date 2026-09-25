@@ -1,4 +1,4 @@
-"""Offline CLI. There is deliberately no serve or real model-call command yet."""
+"""Configuration and offline evaluation CLI; no service listener is started here."""
 
 import argparse
 import json
@@ -7,7 +7,9 @@ from pathlib import Path
 import sys
 
 from . import __version__
-from .config.loader import assert_separate_paths, load_connection, load_repository
+from .config.loader import (assert_separate_paths, assert_service_isolation,
+                            inspect_service_readiness, load_connection, load_repository,
+                            load_service)
 from .config.types import PURPOSES
 from .errors import AgentError
 from .evaluation.runner import (compare_reports, load_plan, load_suite, read_report,
@@ -23,6 +25,10 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("--config", type=Path, required=True)
     validate.add_argument("--repository", type=Path)
     validate.add_argument("--compare-config", type=Path, help="Also reject overlapping managed directories in a second connection profile")
+    service = commands.add_parser("validate-service", help="Validate a service v1 bundle and inspect local readiness without network access")
+    service.add_argument("--service", type=Path, required=True)
+    service.add_argument("--compare-service", type=Path, help="Also reject shared runtime paths and credential references")
+    service.add_argument("--require-ready", action="store_true", help="Exit 3 while local service prerequisites remain unconfigured")
     route = commands.add_parser("route-model", help="Explain model choice and configuration readiness; never call a model")
     route.add_argument("--config", type=Path, required=True)
     route.add_argument("--repository", type=Path)
@@ -63,6 +69,17 @@ def _emit(value, *, error: bool = False) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "validate-service":
+            bundle = load_service(args.service)
+            if args.compare_service:
+                assert_service_isolation(bundle, load_service(args.compare_service))
+            readiness = inspect_service_readiness(bundle, environment=os.environ)
+            _emit({"valid": True, "validation_scope": "structure_references_and_local_readiness",
+                   "profile": bundle.connection.profile, "service_digest": bundle.service.digest,
+                   "connection_digest": bundle.connection.digest,
+                   "repository_count": len(bundle.repositories), "readiness": readiness.as_dict(),
+                   "network_calls": 0, "production_ready": False})
+            return 3 if args.require_ready and readiness.status != "ready_for_transport_consumers" else 0
         if args.command == "execution":
             from .execution.demo import run_demo
             report = run_demo(args.output)

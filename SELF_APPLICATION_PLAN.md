@@ -4,11 +4,11 @@
 
 ## 1. 현재 가능한 것과 남은 것
 
-현재는 연결/repository 설정 로더, 여러 LLM 선택, 호출 전 조건 검사, 요구사항·설계 revision·사람 승인·상태 전이·저널 복구와 로컬 평가가 구현되어 있다. GitHub App 설치는 repo 인증·권한·이벤트의 연결점이며 아래 실행 기능을 대신하지 않는다.
+현재는 연결/repository/service 설정 로더와 공통 HTTPS transport, 여러 LLM 선택, 호출 전 조건 검사, 요구사항·설계 revision·사람 승인·상태 전이·저널 복구와 로컬 평가가 구현되어 있다. GitHub App 설치는 repo 인증·권한·이벤트의 연결점이며 아래 실행 기능을 대신하지 않는다.
 
 | 기능 | 현재 상태 | 자기 적용에 필요한 결과 |
 | --- | --- | --- |
-| 설정·모델 선택·로컬 평가 | 구현됨 | 현재 코드를 공통 기반으로 재사용 |
+| 설정·HTTP 경계·모델 선택·로컬 평가 | service readiness와 공통 transport까지 구현됨 | 실제 GHES/LLM adapter가 같은 transport를 사용하도록 연결 |
 | 요구사항 revision·승인·상태·복구 | 구현 시작 조건까지 구현 | 실제 GHES 관측·실행 중단/복구와 연결 필요 |
 | GHES App/webhook/API | 미구현 | Issue/댓글 수신, App 인증, 작업 branch/PR 게시 |
 | 실제 모델·도구 loop | 미구현 | 읽기·수정·검사 도구를 모델 요청에 연결 |

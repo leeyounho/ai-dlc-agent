@@ -2,7 +2,7 @@
 
 [상세 설계](DETAILED_DESIGN.md)와 [작업 상태 계약](WORKFLOW_SPEC.md)의 실행 기반이다. 숫자는 변경 가능한 초기 기본값이며 실제 성능·복구 SLA가 아니다.
 
-파일 저널·OS instance lock·task CAS·snapshot 복구와 command intent/실행·중단·inspect 기반 복구를 구현했다. 실제 경로는 instance/repository 복합 hash를 사용하며 sources/revisions는 content-addressed blob으로 통합한다. 현재 동기 core의 task lock은 thread RLock이며 async 서비스 통합은 후속이다. inbox·GitHub/배포 effect intent/inspect·운영 launcher의 OS 프로세스 재조회는 아직 미구현이다. [작업 엔진](WORKFLOW_IMPLEMENTATION.md)과 [실행 구현 범위](EXECUTION_IMPLEMENTATION.md)를 함께 읽는다.
+파일 저널·OS instance lock·task CAS·snapshot 복구와 command intent/실행·중단·inspect 기반 복구, service 설정/readiness와 공통 HTTPS transport를 구현했다. 실제 경로는 instance/repository 복합 hash를 사용하며 sources/revisions는 content-addressed blob으로 통합한다. 현재 동기 core의 task lock은 thread RLock이며 async 서비스 통합은 후속이다. inbox·GitHub/LLM adapter·배포 effect intent/inspect·운영 launcher의 OS 프로세스 재조회는 아직 미구현이다. [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 범위](EXECUTION_IMPLEMENTATION.md), [transport 구현 범위](TRANSPORT_IMPLEMENTATION.md)를 함께 읽는다.
 
 다중 모델 D2의 [MULTI_MODEL_SPEC.md](MULTI_MODEL_SPEC.md)를 함께 적용한다. run 기록에 목적별 model/provider/session을 연결하고 모델/도구 호출·활성 시간 예산은 모든 모델을 합산한다. 서비스와 provider 동시성 한도를 모두 적용하며 모델 교체로 도구를 중복 실행하지 않는다.
 
@@ -129,7 +129,7 @@ helper가 권한을 사용하는 범위는 운영자가 설치한 UID 전환·�
 
 연결 설정의 host 목록은 내부 승인 목록을 표현한다. 기본 outbound transport는 HTTPS/443만 허용한다. 다른 내부 port/비HTTP 목적지가 필요하면 운영자가 별도 runtime egress profile에 scheme/host/address/port/용도를 등록한다. hostname suffix나 사설 IP만 보고 내부라고 판단하지 않는다.
 
-애플리케이션 transport에서 URL·port·redirect·proxy·DNS 결과와 승인 route를 확인하고 TLS/사내 CA를 적용한다. DNS 변경으로 경계를 벗어나면 차단한다. HTTPX 외의 Git·JVM·shell·하위 프로세스는 OS 차원의 UID/목적지 정책 또는 승인된 내부 egress 경로로 통제한다. 기본 거부 정책에서 필요한 목적지만 허용하며 IPv4/IPv6·UDP·DNS·proxy 우회를 포함한다.
+구현된 애플리케이션 transport는 URL·port·redirect·명시적 no-proxy·DNS 결과와 승인 route를 확인하고 TLS/사내 CA를 적용한다. DNS 변경으로 경계를 벗어나면 차단한다. 고정 proxy는 인증·DNS 책임·TLS 방식을 별도 계약으로 추가하기 전 지원하지 않는다. Git·JVM·shell·하위 프로세스는 OS 차원의 UID/목적지 정책 또는 승인된 내부 egress 경로로 통제해야 한다. 기본 거부 정책에서 필요한 목적지만 허용하며 IPv4/IPv6·UDP·DNS·proxy 우회를 포함한다.
 
 runner는 필요한 Maven/fixture 내부 대상만, publisher는 GHES만, 제어 모델 client는 지정된 모델만, deploy executor는 지정 환경만 접근하게 한다. 목적지 policy는 모델이나 repo script가 수정할 수 없다. root/helper 권한으로 egress rule을 동적으로 확대하지 않는다.
 
