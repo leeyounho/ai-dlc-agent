@@ -1,10 +1,12 @@
-"""Configuration and offline evaluation CLI; no service listener is started here."""
+"""Configuration, persistent service, workflow, and offline evaluation CLI."""
 
 import argparse
 import json
 import os
 from pathlib import Path
+import signal
 import sys
+import threading
 
 from . import __version__
 from .config.loader import (assert_separate_paths, assert_service_isolation,
@@ -29,6 +31,11 @@ def _parser() -> argparse.ArgumentParser:
     service.add_argument("--service", type=Path, required=True)
     service.add_argument("--compare-service", type=Path, help="Also reject shared runtime paths and credential references")
     service.add_argument("--require-ready", action="store_true", help="Exit 3 while local service prerequisites remain unconfigured")
+    serve = commands.add_parser("serve", help="Run the single persistent Agent service")
+    serve.add_argument("--config", "--service", dest="service", type=Path, required=True,
+                       help="Service v1 configuration file")
+    serve.add_argument("--once", action="store_true",
+                       help="Recover, process one scheduling cycle, checkpoint, and exit without listening")
     route = commands.add_parser("route-model", help="Explain model choice and configuration readiness; never call a model")
     route.add_argument("--config", type=Path, required=True)
     route.add_argument("--repository", type=Path)
@@ -69,6 +76,60 @@ def _emit(value, *, error: bool = False) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "serve":
+            from .service.bootstrap import build_github_components
+            from .service.http_server import ServiceHttpServer
+            from .service.runtime import ServiceRuntime
+            from .storage import FileJournal
+
+            bundle = load_service(args.service)
+            state_root = bundle.connection.directories["state"]
+            environment = dict(os.environ)
+            with FileJournal(state_root) as store:
+                components = build_github_components(bundle, store, environment=environment)
+                runtime = ServiceRuntime(bundle, store, processor=components.processor,
+                                         environment=environment,
+                                         startup_reasons=components.reasons)
+                runtime.start()
+                if args.once:
+                    try:
+                        cycle = runtime.tick()
+                        report = {"service": "ai-dlc", "mode": "once",
+                                  "state_root": str(state_root), "cycle": cycle,
+                                  **runtime.status()}
+                    finally:
+                        runtime.shutdown()
+                    _emit(report)
+                    return 0 if report["health"]["ready"] else 3
+
+                stop_event = threading.Event()
+                previous_handlers = {}
+
+                def request_stop(_signum, _frame):
+                    stop_event.set()
+
+                for name in ("SIGINT", "SIGTERM"):
+                    signum = getattr(signal, name, None)
+                    if signum is not None:
+                        previous_handlers[signum] = signal.signal(signum, request_stop)
+                server = None
+                try:
+                    server = ServiceHttpServer(bundle.service.web, runtime,
+                                               webhook_endpoint=components.endpoint)
+                    server.start()
+                    _emit({"service": "ai-dlc", "mode": "serve",
+                           "listen": {"host": server.address[0], "port": server.address[1]},
+                           **runtime.status()})
+                    runtime.run(stop_event)
+                finally:
+                    if server is not None:
+                        server.close_intake()
+                    runtime.shutdown()
+                    if server is not None:
+                        server.stop()
+                    for signum, handler in previous_handlers.items():
+                        signal.signal(signum, handler)
+                return 0
         if args.command == "validate-service":
             bundle = load_service(args.service)
             if args.compare_service:

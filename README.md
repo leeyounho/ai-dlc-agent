@@ -1,6 +1,6 @@
 # AI-DLC Agent
 
-사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한 관측 adapter, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 별도 로컬 source snapshot, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험과 HTTP route wiring, LLM adapter 연결·Git clone/PR·운영용 실행 격리·배포·웹 서버는 후속 범위입니다.
+사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한 관측 adapter, 단일 상시 실행 서비스·공정 스케줄러·HTTP webhook/health route, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 별도 로컬 source snapshot, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험, LLM adapter 연결·Git clone/PR·운영용 실행 격리·배포는 후속 범위입니다.
 
 ## 실행
 
@@ -10,6 +10,8 @@ Python 3.12 이상이 필요합니다. 현재 핵심 모듈은 표준 라이브�
 python -m ai_dlc --help
 python -m ai_dlc validate-config --config config/production.example.json --repository config/repository.example.json --compare-config config/test-external.example.json
 python -m ai_dlc validate-service --service config/service.example.json
+python -m ai_dlc serve --config config/service.example.json --once
+python -m ai_dlc serve --config /etc/ai-dlc/service.json
 python -m ai_dlc route-model --config config/production.example.json --purpose implementation
 python -m ai_dlc eval validate --plan evaluation/core.plan.json
 python -m ai_dlc eval run --plan evaluation/core.plan.json
@@ -19,6 +21,8 @@ python -m unittest discover -s tests -v
 ```
 
 `validate-config`는 연결 schema 2와 선택적인 repository schema 2를 검증합니다. `validate-service`는 service schema 1과 connection/repository 참조, 관리 경로, credential 참조 및 로컬 readiness를 네트워크 없이 검사합니다. 예시에는 실제 secret/runtime profile/address range가 없으므로 구조가 유효해도 `configuration_pending`입니다. `--compare-service`는 운영/테스트의 workspace/state/log/cache/artifact 및 credential 참조가 겹치지 않는지도 검사합니다. OS 계정과 방화벽의 실제 격리 검증은 아닙니다.
+
+`serve`는 state 디렉터리의 단일 인스턴스 잠금을 획득하고 저널·미처리 webhook을 복구한 뒤 저장소별 라운드로빈으로 계속 처리합니다. `/health/live`와 `/health/ready`는 분리되어 있으며, runner/model/GitHub 설정이나 재관측이 필요한 경우 프로세스가 살아 있어도 ready는 503입니다. SIGINT/SIGTERM은 신규 intake·dispatch를 먼저 닫고 제한 시간 동안 drain한 뒤 미완료 작업을 복구 대상으로 기록합니다. [상시 실행 구현 계약](SERVICE_IMPLEMENTATION.md)에 복구 및 종료 의미를 기록했습니다.
 
 `route-model`은 선택된 model/provider와 선택 근거·미구성 사유를 출력하며 모델을 호출하지 않습니다. 실제 adapter를 등록하지 않았고 예시 주소/기능/한도가 미확정이므로 현재 예시는 configuration_pending입니다. repository 예시도 disabled 상태이므로 호출 전 검사를 하면 denied로 표시합니다. 형식상 유효한 것과 호출 준비/운영 준비가 된 것을 구분합니다. `--require-ready`를 추가하면 미준비 상태에서 종료 코드 3을 반환합니다.
 
@@ -56,6 +60,7 @@ python -m ai_dlc eval compare --baseline <previous-report-directory> --candidate
 - [workflow](ai_dlc/workflow/engine.py): 원문 보존·req/des revision, 필수 요구사항 승인, 별도 시작/자동 시작, 협의/자동 설계, 변경 시 재승인, 중지·재개·취소. 구현 시작 조건 확인까지이며 실제 도구 실행은 하지 않습니다.
 - [storage](ai_dlc/storage/journal.py): 단일 인스턴스 잠금, task별 CAS·중복 이벤트 방지, immutable blob·저널·파생 snapshot 복구.
 - [execution](ai_dlc/execution/coordinator.py): 승인·source/runtime digest에 묶인 command intent, 재전달 중복 방지, 중단·복구, source 변경 확인·JUnit 검증. 기본 runner는 미구성 차단이며 실제 프로세스 시험에는 내장 합성 runner만 사용합니다.
+- [service](ai_dlc/service/): 단일 프로세스 lifecycle, durable inbox 소비, 저장소별 공정 스케줄링, 동시성 한도, restart checkpoint, graceful shutdown, webhook 및 health HTTP route.
 - [evaluation](ai_dlc/evaluation/runner.py): 사례 실행·평가 근거·JSON/Markdown 보고서·회귀 비교.
 - [tests](tests/test_config_and_routing.py): 표준 unittest 기반 테스트. 후속 pytest에서도 실행 가능한 구조입니다.
 

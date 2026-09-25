@@ -185,6 +185,40 @@ class FileJournal:
         _no_links(path)
         return path
 
+    def task_keys(self) -> tuple[TaskKey, ...]:
+        """Return identities present in the journal after validating their layout.
+
+        Enumeration is intentionally derived from the first immutable record rather
+        than from directory names alone.  This lets restart recovery discover work
+        without maintaining a second, crash-sensitive index.
+        """
+        if self._file is None:
+            raise AgentError("STATE_CLOSED", "Open the state store before use.")
+        directory = self.root / "tasks"
+        _no_links(directory)
+        if not _native(directory).exists():
+            return ()
+        keys = []
+        try:
+            for repository_dir in sorted(_native(directory).iterdir(), key=lambda item: item.name):
+                if not repository_dir.is_dir() or not re.fullmatch(r"[0-9a-f]{64}", repository_dir.name):
+                    raise ValueError
+                for issue_dir in sorted(repository_dir.iterdir(), key=lambda item: item.name):
+                    if not issue_dir.is_dir() or not re.fullmatch(r"[1-9][0-9]*", issue_dir.name):
+                        raise ValueError
+                    first = issue_dir / "journal" / "00000000000000000001.json"
+                    record = self._read(first)
+                    task = record.get("task")
+                    if type(task) is not dict or set(task) != {"instance_id", "repository_id", "issue_number"}:
+                        raise ValueError
+                    key = TaskKey(task["instance_id"], task["repository_id"], task["issue_number"])
+                    if _native(self.task_path(key)) != Path(issue_dir) or key.issue_number != int(issue_dir.name):
+                        raise ValueError
+                    keys.append(key)
+        except (AgentError, OSError, TypeError, ValueError):
+            raise AgentError("STATE_CORRUPT", "Task index is invalid; automatic recovery cannot continue.") from None
+        return tuple(keys)
+
     def assert_healthy(self):
         if self._file is None:
             raise AgentError("STATE_CLOSED", "Open the state store before use.")
