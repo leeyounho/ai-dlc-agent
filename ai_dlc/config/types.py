@@ -103,6 +103,7 @@ class GitHubServiceConfig:
     app_id_env: str
     private_key_file: Path
     webhook_secret_env: str
+    api_version: str | None = None
 
 
 @dataclass(frozen=True)

@@ -35,7 +35,7 @@ provider 인증은 unconfigured/none/bearer/header로 분리하고 복합 인증
 
 | 객체 | 필드·제약 |
 | --- | --- |
-| github | instance_id, web_base_url, api_base_url, app_id_env, private_key_file, webhook_secret_env 모두 필수. GHES URLs는 연결 프로파일의 내부 host에 속해야 함 |
+| github | instance_id, web_base_url, api_base_url, app_id_env, private_key_file, webhook_secret_env 모두 필수. api_version은 선택적인 `YYYY-MM-DD` REST version. GHES URLs는 연결 프로파일의 내부 host에 속해야 함 |
 | web | bind_host, port(1..65535), public_url(HTTPS), tls_mode(reverse_proxy/direct), trusted_proxy_cidrs, identity_adapter, client_id_env, client_secret_env, session_absolute_seconds, session_idle_seconds, permission_cache_seconds, sse_heartbeat_seconds, poll_interval_seconds |
 | execution | runner_pool_profile_file, toolchains_profile_file, egress_profile_file, artifact_root, global_concurrency, repository_concurrency, model_concurrency |
 | transport | tls(system/custom_ca), proxy(mode=none), dns_mode=system, host/port/address CIDR routes, connect/read timeout, 응답 크기, 읽기 시도 횟수 |

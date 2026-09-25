@@ -1,5 +1,6 @@
 """Strict offline loaders for connection, repository, and service documents."""
 
+from datetime import date
 import ipaddress
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from types import MappingProxyType
@@ -278,10 +279,19 @@ def parse_service(raw: dict, *, base_dir: Path, connection: ConnectionConfig) ->
     connection_file = _reference(raw["connection_profile_file"], base_dir, "connection_profile_file")
 
     github_raw = v.obj(raw["github"], "github", {"instance_id", "web_base_url", "api_base_url",
-                       "app_id_env", "private_key_file", "webhook_secret_env"})
+                       "app_id_env", "private_key_file", "webhook_secret_env"}, {"api_version"})
     instance_id = v.identifier(github_raw["instance_id"], "github.instance_id")
     authorize_url(connection.network, github_raw["web_base_url"])
     authorize_url(connection.network, github_raw["api_base_url"])
+    api_version = github_raw.get("api_version")
+    if api_version is not None:
+        api_version = v.string(api_version, "github.api_version")
+        try:
+            if not re.fullmatch(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}", api_version):
+                raise ValueError
+            date.fromisoformat(api_version)
+        except ValueError:
+            v.fail("CONFIG_VALUE", "github.api_version", "Expected an explicit REST API version date.")
     github = GitHubServiceConfig(
         instance_id,
         github_raw["web_base_url"],
@@ -289,6 +299,7 @@ def parse_service(raw: dict, *, base_dir: Path, connection: ConnectionConfig) ->
         v.env_name(github_raw["app_id_env"], "github.app_id_env"),
         _reference(github_raw["private_key_file"], base_dir, "github.private_key_file"),
         v.env_name(github_raw["webhook_secret_env"], "github.webhook_secret_env"),
+        api_version,
     )
 
     web_required = {"bind_host", "port", "public_url", "tls_mode", "trusted_proxy_cidrs",
