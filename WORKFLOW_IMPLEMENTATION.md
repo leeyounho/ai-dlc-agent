@@ -24,7 +24,7 @@ Issue 원문 관측·보존
 
 ## 2. 승인과 외부 사실의 경계
 
-[ObservationGateway](ai_dlc/workflow/observations.py)는 신뢰된 GHES 연결부가 구현할 인터페이스다. 실제 네트워크 구현은 아직 없다.
+[ObservationGateway](ai_dlc/workflow/observations.py)는 신뢰된 GHES 연결부의 인터페이스다. [GitHubApiClient](ai_dlc/github/client.py)가 공통 HTTPS transport와 repository-scoped installation token으로 이 인터페이스를 구현한다. 실제 GHES 계약 시험과 HTTP route wiring은 아직 없다.
 
 | 조회 | 연결부가 제공해야 하는 사실 |
 | --- | --- |
@@ -32,7 +32,7 @@ Issue 원문 관측·보존
 | comment(task, comment_id) | 현재 원본 댓글·사람/bot 종류·작성자 ID·생성/수정 시점. 삭제됐다면 None |
 | permission(task, actor_id) | 현재 repository 권한. 조회 실패를 write로 바꾸지 않음 |
 
-Webhook payload나 모델이 `verified=true`라고 적었다는 이유로 이 인터페이스를 구현해서는 안 된다. GHES 어댑터는 원본을 다시 조회하고 실제 권한을 확인해야 한다. 라이브러리의 Python 호출자는 신뢰된 제어 프로그램이다. CLI에는 임의 사용자 ID로 운영 승인을 만드는 명령을 제공하지 않는다.
+Webhook payload나 모델이 `verified=true`라고 적었다는 이유로 승인하지 않는다. GitHub processor는 payload의 ID만 재조회 대상으로 사용하고 원본과 실제 권한을 API에서 다시 확인한다. 라이브러리의 Python 호출자는 신뢰된 제어 프로그램이다. CLI에는 임의 사용자 ID로 운영 승인을 만드는 명령을 제공하지 않는다. App 등록·endpoint·인증 경계는 [GitHub 구현 계약](GITHUB_IMPLEMENTATION.md)에 기록한다.
 
 명령은 사람이 작성한 미편집 댓글의 첫 비어 있지 않은 줄에 있어야 한다. 인용문·code fence·들여쓰기 code block·bot 명령을 거부한다. 현재 지원하는 변경 명령은 requirements/design 승인, start, amend, stop, resume, cancel이다. status 조회는 별도 reader의 책임이며 CLI `workflow inspect`가 로컬 상태를 보여준다. GitHub 댓글 응답과 게시 기능은 아직 없다.
 

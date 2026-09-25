@@ -100,6 +100,20 @@ class ServiceConfigTests(unittest.TestCase):
                 self.assert_code(code, lambda: parse_service(raw, base_dir=ROOT / "config",
                                                               connection=self.connection))
 
+    def test_github_api_version_is_optional_but_strict(self):
+        raw = deepcopy(self.raw)
+        raw["github"]["api_version"] = "2022-11-28"
+        self.assertEqual(parse_service(raw, base_dir=ROOT / "config",
+                                       connection=self.connection).github.api_version,
+                         "2022-11-28")
+        for value in (20221128, "2022-1-28", "2022-99-99", "v3"):
+            with self.subTest(value=value):
+                changed = deepcopy(self.raw)
+                changed["github"]["api_version"] = value
+                self.assert_code("CONFIG_TYPE" if type(value) is not str else "CONFIG_VALUE",
+                                 lambda changed=changed: parse_service(
+                                     changed, base_dir=ROOT / "config", connection=self.connection))
+
     def test_production_external_service_destination_is_rejected_offline(self):
         self.raw["github"]["api_base_url"] = "https://api.openai.com/v1"
         with OfflineNetworkGuard() as network:

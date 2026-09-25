@@ -1,6 +1,6 @@
 # 서비스 설정·HTTP transport 구현 계약
 
-현재 구현은 service schema 1을 connection/repository 설정과 함께 로드하고, GitHub 및 LLM adapter가 공통으로 사용할 HTTPS transport 경계를 제공한다. 실제 GitHub App/API adapter와 모델 protocol adapter는 아직 연결하지 않았으며 이 문서는 실제 GHES·LLM 통합 성공을 주장하지 않는다.
+현재 구현은 service schema 1을 connection/repository 설정과 함께 로드하고, GitHub 및 LLM adapter가 공통으로 사용할 HTTPS transport 경계를 제공한다. GitHub App/API adapter는 이 경계를 사용하도록 연결했지만 실제 GHES 계약 시험은 아직 하지 않았고, 모델 protocol adapter도 연결하지 않았다. 이 문서는 실제 GHES·LLM 통합 성공을 주장하지 않는다.
 
 ## 1. 서비스 설정과 readiness
 
@@ -42,7 +42,7 @@ python -m ai_dlc validate-service --service <test-service.json> --compare-servic
 
 | 통신 주체 | 현재 애플리케이션 경계 | 추가로 필요한 통제 |
 | --- | --- | --- |
-| GitHub/LLM Python adapter | `HttpTransport`를 유일한 HTTP 경계로 사용 | 실제 adapter 연결과 GHES/provider 계약 시험 |
+| GitHub/LLM Python adapter | GitHub adapter는 `HttpTransport`를 사용, LLM adapter는 미연결 | 실제 GHES/provider 계약 시험과 LLM adapter 연결 |
 | Git publisher | 해당 없음 | 고정 Git 실행 파일, credential helper 제거, publisher UID egress |
 | Maven/JVM/repository command | 해당 없음 | runner UID별 OS egress, 내부 settings/cache/truststore |
 | 배포 command | 해당 없음 | deployer profile과 대상별 OS egress |
