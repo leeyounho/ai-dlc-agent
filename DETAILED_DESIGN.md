@@ -2,7 +2,7 @@
 
 상태: 현재 합의에 기반한 구현 기준. 구현이나 실제 환경에서의 호환성 검증이 완료되었다는 의미는 아니다.
 
-구현 상태: 설정·모델 선택·요구사항/설계 승인·파일 저널/복구에 더해 로컬 source snapshot·command 실행/중단/복구·JUnit 검증을 구현했다. [README.md](README.md), [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 계약](EXECUTION_IMPLEMENTATION.md)에 실행 방법과 실제 미구현 범위를 기록한다. 외부 의존성이 없는 이 핵심 모듈은 immutable dataclass와 strict 검증 함수를 사용한다. 실제 프로세스 검증은 내장 합성 프로그램에 한정하며 FastAPI/Pydantic, 실제 API/운영 OS runner는 후속 작업이다.
+구현 상태: connection/repository/service 설정·readiness와 공통 HTTPS transport, 모델 선택, 요구사항/설계 승인·파일 저널/복구에 더해 로컬 source snapshot·command 실행/중단/복구·JUnit 검증을 구현했다. [README.md](README.md), [transport 구현 계약](TRANSPORT_IMPLEMENTATION.md), [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 계약](EXECUTION_IMPLEMENTATION.md)에 실행 방법과 실제 미구현 범위를 기록한다. 외부 의존성이 없는 이 핵심 모듈은 immutable dataclass와 strict 검증 함수를 사용한다. 실제 HTTP 검증은 loopback TLS fixture, 프로세스 검증은 내장 합성 프로그램에 한정하며 FastAPI/Pydantic, 실제 API/운영 OS runner는 후속 작업이다.
 
 ## 1. 문서의 위치와 확정 범위
 
@@ -27,13 +27,13 @@
 | 구현 언어 | CPython 3.12 계열 | asyncio·파일·프로세스·HTTP 중심의 단일 코드베이스. 정확한 patch와 native 의존성은 내부 빌드 검증 후 고정 |
 | HTTP | FastAPI + Uvicorn, worker 1개 | webhook·웹·조회 API를 같은 앱에 제공. 다중 worker로 중복 scheduler를 만들지 않음 |
 | 자료 검증 | 핵심은 strict 검증 함수·immutable dataclass, 설정은 JSON; 후속 HTTP 경계에 Pydantic 2 계열 | 중복 key·알 수 없는 필드·묵시적 자료형 변환 거부, 명시적 schema_version |
-| 통신 | HTTPX | GHES·모델·허용된 HTTP 상태 확인. 목적지 검사와 timeout은 공통 transport에서 적용 |
+| 통신 | 현재 표준 라이브러리 socket/ssl/http.client 경계; 후속 adapter에서 교체 가능 | GHES·모델 공통 정책. 정확한 host/port·DNS CIDR·TLS/CA·timeout·응답 제한 적용, 환경 proxy/redirect/fallback 금지 |
 | App 서명 | PyJWT + cryptography | 자체 암호 구현 배제. 설치별 native 호환성 검증 필요 |
 | 웹 | Jinja2 + 번들 CSS·작은 JavaScript | SSR 목록·상세와 SSE 갱신. CDN·별도 frontend 서버 없음 |
 | 작업 엔진 | 명시적 Python 상태 전이 + asyncio scheduler | 승인과 실행 판단을 LLM에 맡기지 않음 |
 | 코딩 Agent | 직접 구현하는 제한된 tool loop | provider 차이를 어댑터에 가두고 실행 권한·문맥·재시도 제어 |
 | 파일 상태 | JSON snapshot + 개별 JSON event/intent 파일 | DB 없음, 단일 writer, 파일 교체와 재조정으로 복구 |
-| 검증 | 현재 표준 unittest, 후속 pytest·HTTP/프로세스 시험 | 현재 모델 경계는 로컬 테스트 대역. 실제 Gemma·GHES·RHEL 시험과 구분 |
+| 검증 | 현재 표준 unittest와 loopback TLS/합성 프로세스, 후속 pytest·실제 API/OS 시험 | 실제 Gemma·GHES·RHEL 시험과 구분 |
 | 설치 | OS·CPU별 offline tar.gz, systemd 단일 서비스 | 앱 전용 runtime 포함, 사내 Maven artifact로 공급 |
 
 OpenHands·LangGraph·LangChain은 D1 필수 의존성에서 제외한다. 검증되지 않은 SDK에 권한·복구·상태의 책임을 추가하지 않는다. Git·JDK·Maven·OS 제어 도구는 승인된 별도 toolchain 경로를 사용한다.

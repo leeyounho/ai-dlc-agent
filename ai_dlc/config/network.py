@@ -46,6 +46,11 @@ def url_host(url: str) -> str:
 
 def authorize_url(network: NetworkConfig, url: str, boundary: str | None = None) -> None:
     host = url_host(url)
+    authorize_host(network, host, boundary)
+
+
+def authorize_host(network: NetworkConfig, host: str, boundary: str | None = None) -> None:
+    host = normalize_host(host)
     internal = host in network.internal_hosts
     external = (network.profile == "test" and network.external_access
                 and host in network.external_hosts)
