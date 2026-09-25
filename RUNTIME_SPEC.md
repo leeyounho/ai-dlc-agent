@@ -2,7 +2,7 @@
 
 [상세 설계](DETAILED_DESIGN.md)와 [작업 상태 계약](WORKFLOW_SPEC.md)의 실행 기반이다. 숫자는 변경 가능한 초기 기본값이며 실제 성능·복구 SLA가 아니다.
 
-파일 저널·OS instance lock·task CAS·snapshot 복구와 command intent/실행·중단·inspect 기반 복구, service 설정/readiness와 공통 HTTPS transport를 구현했다. 실제 경로는 instance/repository 복합 hash를 사용하며 sources/revisions는 content-addressed blob으로 통합한다. 현재 동기 core의 task lock은 thread RLock이며 async 서비스 통합은 후속이다. inbox·GitHub/LLM adapter·배포 effect intent/inspect·운영 launcher의 OS 프로세스 재조회는 아직 미구현이다. [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 범위](EXECUTION_IMPLEMENTATION.md), [transport 구현 범위](TRANSPORT_IMPLEMENTATION.md)를 함께 읽는다.
+파일 저널·OS instance lock·task CAS·snapshot 복구와 command intent/실행·중단·inspect 기반 복구, service 설정/readiness와 공통 HTTPS transport를 구현했다. 설치자 소유 RHEL/UID/resource/toolchain/egress profile과 native helper start/inspect/cancel 제어 adapter도 구현했으며 미검증 platform은 차단한다. 실제 경로는 instance/repository 복합 hash를 사용하며 sources/revisions는 content-addressed blob으로 통합한다. 현재 동기 core의 task lock은 thread RLock이며 async 서비스 통합은 후속이다. LLM adapter·배포 effect intent/inspect, native helper 패키징과 실제 RHEL OS evidence는 아직 미구현/미검증이다. [작업 엔진](WORKFLOW_IMPLEMENTATION.md), [실행 구현 범위](EXECUTION_IMPLEMENTATION.md), [RHEL runner 계약](RHEL_RUNNER_IMPLEMENTATION.md), [transport 구현 범위](TRANSPORT_IMPLEMENTATION.md)를 함께 읽는다.
 
 다중 모델 D2의 [MULTI_MODEL_SPEC.md](MULTI_MODEL_SPEC.md)를 함께 적용한다. run 기록에 목적별 model/provider/session을 연결하고 모델/도구 호출·활성 시간 예산은 모든 모델을 합산한다. 서비스와 provider 동시성 한도를 모두 적용하며 모델 교체로 도구를 중복 실행하지 않는다.
 

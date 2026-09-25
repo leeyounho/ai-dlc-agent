@@ -1,6 +1,6 @@
 # 공통 실행·소스 검증 구현
 
-언어에 독립적인 WorkspaceManager, ExecutionPlan, ExecutionCoordinator, RunnerPort와 JUnit 결과 해석기를 구현했다. 요구사항·설계 승인 엔진과 같은 파일 저널을 사용한다. 실제 프로세스 시험은 패키지에 고정된 합성 프로그램만 실행하며, 임의 repository 코드의 운영 실행은 설치된 OS runner가 준비될 때까지 차단한다.
+언어에 독립적인 WorkspaceManager, ExecutionPlan, ExecutionCoordinator, RunnerPort와 JUnit 결과 해석기를 구현했다. 요구사항·설계 승인 엔진과 같은 파일 저널을 사용한다. 로컬 demo는 패키지에 고정된 합성 프로그램만 실행한다. 운영 repository 코드는 verified 설치 profile과 제한된 native helper가 준비된 RHEL에서만 `InstalledRunner`가 위임하며, 그 외 환경은 차단한다.
 
 ## 1. 실행 흐름
 
@@ -44,7 +44,7 @@ RunnerPort 구현은 설치된 신뢰 코드다. 모델/Issue가 제공한 `isol
 
 현재 제공하는 [FixtureProcessRunner](ai_dlc/evaluation/process_fixture.py)는 별도의 로컬 평가 의존성이다. 지정한 Python executable로 고정된 합성 프로그램만 실행한다. `-I -S`, shell=False, stdin 차단과 최소 환경을 사용하며 사용자 코드·임의 executable·Python source·URL을 입력으로 받지 않는다. 자식 프로그램은 네트워크를 사용하거나 다른 프로세스를 만들지 않는다. stdout/stderr를 계속 비우며 digest/byte 수를 기록하고 64 KiB를 넘으면 종료한다. 환경의 App/LLM credential·proxy·PATH를 상속하지 않으며 Windows는 필요한 SystemRoot만 전달한다.
 
-이 평가 runner는 OS sandbox가 아니다. 임의 Java/Python/C# 코드를 실행하는 용도로 사용하지 않는다. 운영에는 RHEL UID 전환·resource 제한·egress 통제·실제 process-tree 확인을 구현하고 검증한 별도 launcher adapter가 필요하다. 이는 [런타임 설계](RUNTIME_SPEC.md)의 같은 패키지에 포함되는 짧은 helper이며 별도 상주 서비스나 컨테이너를 요구하지 않는다.
+이 평가 runner는 OS sandbox가 아니며 임의 Java/Python/C# 코드를 실행하는 용도로 사용하지 않는다. 운영용 [InstalledRunner](ai_dlc/execution/installed_runner.py)는 RHEL UID/resource/toolchain/egress profile, root 소유 파일 digest와 exact argv를 검사하고 같은 패키지의 제한된 native helper에만 start/inspect/cancel을 위임한다. helper의 process-tree/UID 재사용 증명이 없으면 성공을 확정하지 않는다. 세부 계약과 실제 미검증 범위는 [RHEL runner 구현 계약](RHEL_RUNNER_IMPLEMENTATION.md)에 있다.
 
 ## 4. 중복·중단·복구
 
@@ -58,7 +58,7 @@ RunnerPort 구현은 설치된 신뢰 코드다. 모델/Issue가 제공한 `isol
 - start 응답 유실, process 관측 실패, 불명확한 프로세스 트리도 uncertain이다. PID만으로 프로세스를 죽이거나 새로운 작업을 실행하지 않는다.
 - 완료 관측은 저장했지만 snapshot 갱신에 실패한 경우 등 파일 오류는 기존 store의 unhealthy/복구 규칙을 따른다. 유효한 commit 없이 새 외부 효과를 시작하지 않는다.
 
-원격 GitHub push/PR·merge·배포의 effect reconciliation, 운영 launcher의 재시작 후 실제 OS process 조회, retry 예산과 전체 단계 scheduling은 이 command coordinator의 구현 완료 범위에 포함하지 않는다.
+원격 GitHub push/PR·merge·배포의 effect reconciliation, retry 예산과 전체 단계 scheduling은 이 command coordinator의 구현 완료 범위에 포함하지 않는다. 설치 runner는 재시작 후 helper identity 조회 계약을 구현했지만 실제 RHEL helper/process 조회 evidence는 아직 없다.
 
 ## 5. JUnit 해석
 
@@ -81,4 +81,4 @@ demo는 합성 Issue의 승인→설계→실제 합성 subprocess→JUnit 검�
 
 network guard는 제어 Python 프로세스의 socket/DNS 시도를 가로챈다. subprocess는 통신 코드가 없는 고정 프로그램이지만 이 guard로 자식 OS 통신을 격리했다고 주장하지 않는다. 어떤 보고서도 운영 도입을 승인하지 않으며 eligible_for_release=false다.
 
-이번 묶음의 Windows/Python 3.14 검증 결과는 unittest 107개 중 106개 통과, 심볼릭 링크 생성 권한 부족으로 1개 생략이다. 실행 demo 6/6과 기존 core 평가 33/33이 통과했고 두 평가의 intercepted_network_attempts는 0이었다. 35개 Python 파일의 3.12 문법, 문서 링크와 패키징 메타데이터도 확인했다. 실제 Python 3.12/RHEL 실행, Java/Maven 빌드와 운영 격리, wheel 생성/설치는 아직 검증하지 않았다.
+현재 개발 환경은 Windows/Python 3.12.6이다. 전체 unittest와 합성 execution/core 평가를 실행하지만 이는 RHEL 격리 증거가 아니다. 설치된 Java는 11.0.2이고 Maven은 없으므로 Java 8/Maven fixture는 실행하지 않았다. 실제 native helper와 RHEL 7/8/9, 별도 UID·filesystem·egress·process tree·resource enforcement, wheel 생성/설치는 아직 검증하지 않았다.

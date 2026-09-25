@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "profile_id": "rhel-runner-pool-example",
+  "workspace_root": "/var/lib/ai-dlc/workspaces",
+  "protected_roots": ["/etc/ai-dlc", "/opt/ai-dlc", "/var/lib/ai-dlc/control"],
+  "platforms": {
+    "rhel7-x86_64": {
+      "os_id": "rhel",
+      "os_major": 7,
+      "architecture": "x86_64",
+      "process_isolation": "cgroup_v1",
+      "network_enforcement": "iptables_owner",
+      "filesystem_enforcement": "posix_uid",
+      "helper_path": "/opt/ai-dlc/bin/runner-helper",
+      "helper_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verification": "unverified",
+      "evidence_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verified_at": null
+    },
+    "rhel8-x86_64-cgroup1": {
+      "os_id": "rhel",
+      "os_major": 8,
+      "architecture": "x86_64",
+      "process_isolation": "cgroup_v1",
+      "network_enforcement": "iptables_owner",
+      "filesystem_enforcement": "posix_uid",
+      "helper_path": "/opt/ai-dlc/bin/runner-helper",
+      "helper_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verification": "unverified",
+      "evidence_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verified_at": null
+    },
+    "rhel9-x86_64": {
+      "os_id": "rhel",
+      "os_major": 9,
+      "architecture": "x86_64",
+      "process_isolation": "cgroup_v2",
+      "network_enforcement": "nftables_cgroup",
+      "filesystem_enforcement": "posix_uid",
+      "helper_path": "/opt/ai-dlc/bin/runner-helper",
+      "helper_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verification": "unverified",
+      "evidence_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "verified_at": null
+    }
+  },
+  "slots": [
+    {"id": "offline-01", "uid": 21001, "gid": 21001, "home_root": "/var/lib/ai-dlc/homes/offline-01", "egress_profile_id": "runner-offline"},
+    {"id": "maven-01", "uid": 21002, "gid": 21002, "home_root": "/var/lib/ai-dlc/homes/maven-01", "egress_profile_id": "runner-maven-internal"}
+  ],
+  "resources": {
+    "python-test": {"cpu_seconds": 300, "memory_bytes": 1073741824, "processes": 64, "file_bytes": 134217728, "output_bytes": 1048576, "disk_bytes": 2147483648},
+    "java-test": {"cpu_seconds": 900, "memory_bytes": 2147483648, "processes": 128, "file_bytes": 536870912, "output_bytes": 2097152, "disk_bytes": 4294967296}
+  }
+}

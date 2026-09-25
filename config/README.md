@@ -2,11 +2,11 @@
 
 현재 파일은 Agent 설정의 연결·저장 경계에 대한 예시이자 구현 계약이다. 연결/repository/service 로더와 Python HTTPS transport는 구현했고 전체 Agent는 후속 범위다. 설정 검증과 실제 외부 접속 통제의 구현·검증을 구분한다. 테스트 데이터 범위는 사용자의 지시에 따라 추후 결정하며 현재 설정 항목이나 구현 착수 조건으로 두지 않는다.
 
-구현 갱신: 연결/repository schema 2와 service schema 1 로더, 공통 HTTPS transport, 모델 선택·호출 전 검사·로컬 평가 CLI를 구현했다. 배포/운영 평가 정책의 실행기는 후속 범위다. [실행 방법](../README.md)과 [transport 구현 계약](../TRANSPORT_IMPLEMENTATION.md)을 참고한다. 실제 API나 OS 통제를 검증한 상태는 아니다.
+구현 갱신: 연결/repository schema 2와 service schema 1 로더, 공통 HTTPS transport, 모델 선택·호출 전 검사·로컬 평가 CLI, 설치자 소유 runner/toolchain/egress schema와 helper 제어 adapter를 구현했다. 배포/운영 평가 정책의 실행기는 후속 범위다. [실행 방법](../README.md), [RHEL runner 계약](../RHEL_RUNNER_IMPLEMENTATION.md), [transport 구현 계약](../TRANSPORT_IMPLEMENTATION.md)을 참고한다. 예시 runtime profile은 의도적으로 unverified이며 실제 API나 OS 통제를 검증한 상태가 아니다.
 
 repository project에 언어 중립적인 `command` 프로필을 추가했다. [repository.self.example.json](repository.self.example.json)은 이 Python 저장소의 unittest·로컬 평가 명령을 보여준다. 기존 Java/Maven 프로필과 같은 workflow·승인 엔진을 사용한다. 두 예시 모두 disabled이며 실제 toolchain 등록·실행 격리·패키징·배포 연결 전에는 실행 준비가 아니다.
 
-필드·타입·교차 검증은 [CONFIG_CONTRACT.md](CONFIG_CONTRACT.md), 여러 LLM 등록·선택은 [MULTI_MODEL_SPEC.md](../MULTI_MODEL_SPEC.md)에 정의한다. 연결/repository schema는 2, service/배포 schema는 1이다. 연결 예시 외에 [service.example.json](service.example.json), [repository.example.json](repository.example.json), [deployment.example.json](deployment.example.json)을 제공한다. service는 운영 연결 예시를 참조하며 secrets/runtime profile/실제 address range는 설치자가 공급한다. repository·배포 예시는 disabled 상태이고 실제 ID·승인 역할·배포 환경을 채우기 전 실행하지 않는다.
+필드·타입·교차 검증은 [CONFIG_CONTRACT.md](CONFIG_CONTRACT.md), 여러 LLM 등록·선택은 [MULTI_MODEL_SPEC.md](../MULTI_MODEL_SPEC.md)에 정의한다. 연결/repository schema는 2, service/배포/runtime profile schema는 1이다. 연결 예시 외에 [service.example.json](service.example.json), [repository.example.json](repository.example.json), [deployment.example.json](deployment.example.json)과 [runtime 예시](../runtime/)를 제공한다. service는 운영 연결 예시를 참조하며 secrets/runtime profile/실제 address range는 설치자가 공급한다. repository·배포·runtime 예시는 disabled/unverified 상태이고 실제 ID·digest·승인 역할·배포 환경을 채우기 전 실행하지 않는다.
 
 [evaluation.example.json](evaluation.example.json)은 별도 평가 정책(schema_version=1)의 초기 제안이다. 실제 평가 세트/scope 경로·운영 자원 목표는 아직 채우지 않았다. policy_status=proposed인 예시로 운영 적합 판정을 내릴 수 없으며, [평가 계약](../EVALUATION_SPEC.md)에 따라 정식 평가 전 정책을 채택·고정한다. 평가 실행기는 아직 구현하지 않았다.
 

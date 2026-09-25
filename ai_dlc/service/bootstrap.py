@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from ..errors import AgentError
+from ..execution import InstalledRunner, load_runtime_profiles
 from ..github import (GitHubApiClient, GitHubAppAuthenticator, GitHubEventProcessor,
                       GitHubWebhookEndpoint, GitHubWebhookReceiver, RepositoryBinding,
                       WebhookInbox)
@@ -15,6 +16,27 @@ class GitHubComponents:
     endpoint: GitHubWebhookEndpoint | None
     processor: GitHubEventProcessor | None
     reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RunnerComponents:
+    runner: InstalledRunner | None
+    installation_digest: str | None
+    reasons: tuple[str, ...]
+
+
+def build_runner_components(bundle) -> RunnerComponents:
+    """Load only installer-owned profiles; unavailable isolation has no shell fallback."""
+    execution = bundle.service.execution
+    try:
+        profiles = load_runtime_profiles(execution.runner_pool_profile_file,
+                                         execution.toolchains_profile_file,
+                                         execution.egress_profile_file)
+        runner = InstalledRunner(profiles)
+        digest = runner.check_installation()
+        return RunnerComponents(runner, digest, ())
+    except AgentError as error:
+        return RunnerComponents(None, None, tuple(sorted({"RUNNER_ADAPTER_UNAVAILABLE", error.code})))
 
 
 def build_github_components(bundle, store, *, environment) -> GitHubComponents:

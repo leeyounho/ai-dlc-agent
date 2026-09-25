@@ -1,6 +1,6 @@
 # AI-DLC Agent
 
-사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한·branch policy 관측 adapter, 단일 상시 실행 서비스·공정 스케줄러·HTTP webhook/health route, 정확한 Git commit checkout과 제한된 파일 도구, repository 규칙·실행 프로필·ADR/KB 문맥 탐색, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험, LLM adapter 연결·Git branch/PR 게시·운영용 실행 격리·배포는 후속 범위입니다.
+사내 standalone Agent입니다. 현재는 connection/repository/service 설정, 공통 HTTPS transport, GitHub App 인증·서명 webhook inbox·현재 Issue/댓글/권한·branch policy 관측 adapter, 단일 상시 실행 서비스·공정 스케줄러·HTTP webhook/health route, 정확한 Git commit checkout과 제한된 파일 도구, repository 규칙·실행 프로필·ADR/KB 문맥 탐색, 설치자 소유 RHEL runner/toolchain/egress profile과 native helper 제어 adapter, 모델 선택, 요구사항·설계 revision과 승인, 파일 저널·복구, 공통 command 실행·중단·결과 검증과 로컬 평가가 구현되어 있습니다. 실제 GHES 계약 시험, LLM adapter 연결·Git branch/PR 게시·RHEL native helper 패키징 및 OS별 검증·배포는 후속 범위입니다.
 
 ## 실행
 
@@ -59,14 +59,14 @@ python -m ai_dlc eval compare --baseline <previous-report-directory> --candidate
 - [models](ai_dlc/models/router.py): Registry, Router, readiness, DispatchGuard. 실제 protocol adapter와 transport 연결은 아직 포함하지 않습니다.
 - [workflow](ai_dlc/workflow/engine.py): 원문 보존·req/des revision, 필수 요구사항 승인, 별도 시작/자동 시작, 협의/자동 설계, 변경 시 재승인, 중지·재개·취소. 구현 시작 조건 확인까지이며 실제 도구 실행은 하지 않습니다.
 - [storage](ai_dlc/storage/journal.py): 단일 인스턴스 잠금, task별 CAS·중복 이벤트 방지, immutable blob·저널·파생 snapshot 복구.
-- [execution](ai_dlc/execution/coordinator.py): 승인·source/runtime digest에 묶인 command intent, 재전달 중복 방지, 중단·복구, source 변경 확인·JUnit 검증. 기본 runner는 미구성 차단이며 실제 프로세스 시험에는 내장 합성 runner만 사용합니다.
+- [execution](ai_dlc/execution/coordinator.py): 승인·source/runtime digest에 묶인 command intent, 재전달 중복 방지, 중단·복구, source 변경 확인·JUnit 검증. 설치 runner는 RHEL/UID/resource/toolchain/egress profile과 제한된 helper protocol을 검증하며 미검증 OS에는 fallback하지 않습니다. [RHEL runner 계약](RHEL_RUNNER_IMPLEMENTATION.md)을 참고합니다.
 - [workspace](ai_dlc/execution/git_workspace.py): 전역 Git 설정·hook·filter·credential을 상속하지 않는 commit/tree 확정, `.git` 없는 작업 공간과 tracked mode manifest. 제한된 파일 도구와 경계는 [구현 계약](WORKSPACE_IMPLEMENTATION.md)을 참고합니다.
 - [repositories](ai_dlc/repositories/): 고정 commit의 README·AGENTS·build/workflow·CODEOWNERS와 GitHub branch policy를 출처와 함께 수집하고, 운영자 toolchain 상한 안에서 Maven/공통 command 실행 프로필을 제안합니다. ADR/KB는 commit/path/digest를 유지해 설계·리뷰 문맥만 선별하며 새 기록은 Git 변경 제안으로 만듭니다. [구현 계약](REPOSITORY_DISCOVERY_IMPLEMENTATION.md)을 참고합니다.
 - [service](ai_dlc/service/): 단일 프로세스 lifecycle, durable inbox 소비, 저장소별 공정 스케줄링, 동시성 한도, restart checkpoint, graceful shutdown, webhook 및 health HTTP route.
 - [evaluation](ai_dlc/evaluation/runner.py): 사례 실행·평가 근거·JSON/Markdown 보고서·회귀 비교.
 - [tests](tests/test_config_and_routing.py): 표준 unittest 기반 테스트. 후속 pytest에서도 실행 가능한 구조입니다.
 
-Python HTTP 경계는 DNS 결과를 설정 CIDR과 대조하고 지정 CA로 TLS hostname을 검증하지만 OS egress 제어를 대신하지 않습니다. Git·JVM·shell·자식 프로세스는 후속 RHEL runner에서 별도 통제가 필요합니다. 현재는 소스 checkout의 `AGENTS.md` 실행이나 동적 plugin import, package 자동 다운로드, 모델 자동 탐색을 수행하지 않습니다. [transport 계약](TRANSPORT_IMPLEMENTATION.md)과 [GitHub App 계약](GITHUB_IMPLEMENTATION.md)을 참고합니다.
+Python HTTP 경계는 DNS 결과를 설정 CIDR과 대조하고 지정 CA로 TLS hostname을 검증하지만 OS egress 제어를 대신하지 않습니다. 설치 runner adapter는 Git·JVM·하위 프로세스용 verified OS egress evidence를 요구하지만 이 Windows 개발 환경에서 실제 방화벽을 검증한 것은 아닙니다. 현재는 소스 checkout의 `AGENTS.md` 실행이나 동적 plugin import, package 자동 다운로드, 모델 자동 탐색을 수행하지 않습니다. [transport 계약](TRANSPORT_IMPLEMENTATION.md), [RHEL runner 계약](RHEL_RUNNER_IMPLEMENTATION.md), [GitHub App 계약](GITHUB_IMPLEMENTATION.md)을 참고합니다.
 
 `workflow demo`는 합성 Issue·사람 관측으로 실제 승인/상태 엔진을 실행하고 `var/workflow-evaluations/<id>/report.json`을 남깁니다. 네트워크·모델 호출은 없고 운영 인수 판정도 아닙니다. `workflow inspect --state-root <demo가 출력한 경로> --instance local-workflow-demo --repository-id 1 --issue 1`로 현재 상태를 읽을 수 있습니다. [구현 계약과 한계](WORKFLOW_IMPLEMENTATION.md)에 승인 원본 재검증·복구·검증 범위를 기록했습니다.
 
@@ -80,7 +80,7 @@ repository의 `project.adapter=command`는 언어 독립적인 executable ID·ar
 
 ## 다음 구현과 설계
 
-다음 범위는 GitHub scope event를 scheduler의 task 열거·중단과 연결하고, 준비된 source와 실제 모델 loop, 운영 runner, GHES Issue→branch/PR 게시를 연결하는 것입니다. 운영 runner의 RHEL 격리·toolchain·egress 검증도 필요합니다. 이후 부모/자식 Issue 조정, 전체 검증·merge·배포 단계와 웹을 연결합니다.
+다음 범위는 GitHub scope event를 scheduler의 task 열거·중단과 연결하고, 준비된 source와 실제 모델 loop 및 설치 runner, GHES Issue→branch/PR 게시를 연결하는 것입니다. native helper 패키징과 RHEL 7/8/9 격리·toolchain·egress evidence 생성은 설치 작업에서 필요합니다. 이후 부모/자식 Issue 조정, 전체 검증·merge·배포 단계와 웹을 연결합니다.
 
 이 소스 자체를 개발 검증용 첫 대상으로 삼는 [자기 적용 계획](SELF_APPLICATION_PLAN.md)과 [첫 Issue 초안](backlog/self-apply-001-evaluation-environment.md)을 준비했습니다. GitHub App 설치만으로 동작하는 단계는 아니며, 공통 실행기·이 저장소의 실행 profile과 Issue→승인→실제 구현→검증→PR 경로를 먼저 구현해야 합니다. AI-DLC 흐름은 언어 독립적이고 실행 환경·명령·결과 해석이 repository별로 달라집니다. 후보 소스와 실행 중인 Agent·평가 기준을 분리합니다.
 

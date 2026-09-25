@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "profile_id": "rhel-egress-example",
+  "profiles": {
+    "runner-offline": {
+      "mode": "production",
+      "subject": "runner",
+      "default_policy": "deny",
+      "dns_mode": "disabled",
+      "proxy_mode": "none",
+      "enforcement": "unverified",
+      "evidence_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "routes": []
+    },
+    "runner-maven-internal": {
+      "mode": "production",
+      "subject": "runner",
+      "default_policy": "deny",
+      "dns_mode": "controlled",
+      "proxy_mode": "none",
+      "enforcement": "unverified",
+      "evidence_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "routes": [
+        {"scheme": "https", "host": "maven.internal.example", "port": 443, "address_ranges": ["10.20.0.0/16"], "purpose": "maven", "boundary": "internal"}
+      ]
+    }
+  }
+}
