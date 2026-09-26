@@ -15,6 +15,7 @@ import ipaddress
 import re
 import socket
 import ssl
+import threading
 import time
 from types import MappingProxyType
 from urllib.parse import unquote, urlsplit
@@ -76,15 +77,41 @@ class SocketHttpBackend:
 
     def exchange(self, destination: ResolvedDestination, request: PreparedRequest, *,
                  tls_context: ssl.SSLContext, connect_timeout: int, read_timeout: int,
-                 max_response_bytes: int) -> HttpResponse:
+                 max_response_bytes: int, deadline=None, cancellation=None) -> HttpResponse:
         raw_socket = None
         tls_socket = None
         request_sent = False
+        watch_stop = threading.Event()
+        watcher = None
+
+        def interrupted():
+            if cancellation is not None and cancellation.is_set():
+                return "cancelled"
+            if deadline is not None and time.monotonic() >= deadline:
+                return "deadline"
+            return None
+
+        def watch_socket():
+            while not watch_stop.wait(0.05):
+                if interrupted():
+                    try:
+                        tls_socket.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+                    return
+
         try:
+            if interrupted():
+                raise BackendFailure(interrupted(), request_sent=False)
             raw_socket = socket.create_connection((destination.address, destination.port),
                                                   timeout=connect_timeout)
-            tls_socket = tls_context.wrap_socket(raw_socket, server_hostname=destination.host)
+            tls_socket = tls_context.wrap_socket(raw_socket, server_hostname=destination.host,
+                                                 do_handshake_on_connect=False)
             raw_socket = None  # ownership moved to the TLS socket
+            if deadline is not None or cancellation is not None:
+                watcher = threading.Thread(target=watch_socket, daemon=True, name="http-cancellation")
+                watcher.start()
+            tls_socket.do_handshake()
             tls_socket.settimeout(read_timeout)
             head = [f"{request.method} {request.target} HTTP/1.1\r\n"]
             head.extend(f"{name}: {value}\r\n" for name, value in request.headers)
@@ -103,6 +130,8 @@ class SocketHttpBackend:
                 if declared < 0 or declared > max_response_bytes:
                     raise BackendFailure("response_limit", request_sent=True)
             body = response.read(max_response_bytes + 1)
+            if interrupted():
+                raise BackendFailure(interrupted(), request_sent=request_sent)
             if len(body) > max_response_bytes:
                 raise BackendFailure("response_limit", request_sent=True)
             headers = MappingProxyType({name.lower(): value for name, value in response.getheaders()})
@@ -112,16 +141,19 @@ class SocketHttpBackend:
         except (ssl.SSLCertVerificationError, ssl.CertificateError):
             raise BackendFailure("tls", request_sent=request_sent) from None
         except ssl.SSLError:
-            raise BackendFailure("response" if request_sent else "tls",
+            raise BackendFailure(interrupted() or ("response" if request_sent else "tls"),
                                  request_sent=request_sent) from None
         except (TimeoutError, socket.timeout):
-            raise BackendFailure("timeout", request_sent=request_sent) from None
+            raise BackendFailure(interrupted() or "timeout", request_sent=request_sent) from None
         except http.client.HTTPException:
-            raise BackendFailure("protocol", request_sent=request_sent) from None
+            raise BackendFailure(interrupted() or "protocol", request_sent=request_sent) from None
         except OSError:
-            raise BackendFailure("response" if request_sent else "network",
+            raise BackendFailure(interrupted() or ("response" if request_sent else "network"),
                                  request_sent=request_sent) from None
         finally:
+            watch_stop.set()
+            if watcher is not None:
+                watcher.join()
             if tls_socket is not None:
                 try:
                     tls_socket.close()
@@ -144,7 +176,19 @@ class HttpTransport:
         self.resolver = resolver or _system_resolver
         self.sleeper = sleeper
 
-    def request(self, request: HttpRequest, *, boundary: str | None = None) -> HttpResponse:
+    def request(self, request: HttpRequest, *, boundary: str | None = None,
+                timeout_seconds: int | None = None, cancellation=None) -> HttpResponse:
+        if timeout_seconds is not None and (type(timeout_seconds) is not int or timeout_seconds <= 0):
+            raise AgentError("HTTP_REQUEST", "HTTP deadline must be a positive duration.")
+        deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
+
+        def check_deadline():
+            if cancellation is not None and cancellation.is_set():
+                raise AgentError("HTTP_CANCELLED", "HTTP operation was cancelled locally.")
+            if deadline is not None and time.monotonic() >= deadline:
+                raise AgentError("HTTP_TIMEOUT", "HTTP operation exceeded its deadline.")
+
+        check_deadline()
         if self.config.proxy_mode != "none" or self.config.dns_mode != "system":
             raise AgentError("TRANSPORT_NOT_CONFIGURED", "Transport route mode is unsupported.")
         prepared, host, port = self._prepare(request, boundary)
@@ -159,13 +203,20 @@ class HttpTransport:
         last_failure = None
         for attempt in range(attempts):
             try:
+                check_deadline()
                 destination = self._resolve(host, port, route.address_ranges)
+                check_deadline()
+                options = {}
+                if deadline is not None or cancellation is not None:
+                    options = {"deadline": deadline, "cancellation": cancellation}
+                remaining = deadline - time.monotonic() if deadline is not None else float("inf")
                 response = self.backend.exchange(
                     destination, prepared, tls_context=tls_context,
-                    connect_timeout=self.config.connect_timeout_seconds,
-                    read_timeout=self.config.read_timeout_seconds,
-                    max_response_bytes=self.config.max_response_bytes,
+                    connect_timeout=min(self.config.connect_timeout_seconds, max(0.001, remaining)),
+                    read_timeout=min(self.config.read_timeout_seconds, max(0.001, remaining)),
+                    max_response_bytes=self.config.max_response_bytes, **options,
                 )
+                check_deadline()
                 if len(response.body) > self.config.max_response_bytes:
                     raise BackendFailure("response_limit", request_sent=True)
                 if response.status in _REDIRECTS:
@@ -183,6 +234,9 @@ class HttpTransport:
                     continue
                 break
         assert last_failure is not None
+        if last_failure.kind in {"cancelled", "deadline"}:
+            code = "HTTP_CANCELLED" if last_failure.kind == "cancelled" else "HTTP_TIMEOUT"
+            raise AgentError(code, "HTTP operation stopped locally; remote completion is not confirmed.")
         if not is_read and last_failure.request_sent:
             raise AgentError("EFFECT_UNKNOWN",
                              "A write response was not confirmed; inspect the remote effect before retrying.")

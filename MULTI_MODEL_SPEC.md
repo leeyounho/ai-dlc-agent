@@ -2,7 +2,7 @@
 
 상태: D1의 단일 모델 설정을 대체하는 설계와 설정 예시. 사내 종속 계약 확인은 현재 작업에서 진행하지 않는다. provider 구현이나 실제 모델 연동이 완료되었다는 의미는 아니다.
 
-구현 상태: registry/router와 호출 전 검사·로컬 평가를 구현했다. 실제 protocol adapter/session 실행과 모델 호출은 아직 없다. [README.md](README.md)의 명령은 외부 접속 없이 모델 선택과 설정 오류를 확인한다.
+구현 상태: registry/router와 호출 전 검사·로컬 평가, Chat Completions/Responses 및 설치 custom adapter 등록, 지속 session·호출/도구 예산·복구를 구현했다. [모델 구현 계약](MODEL_IMPLEMENTATION.md)에 wire/TLS 시험과 한계를 기록했다. 실제 provider 연동 시험과 승인·도구 loop 통합은 후속 범위다. [README.md](README.md)의 진단 명령은 외부 접속 없이 모델 선택과 설정 오류를 확인한다.
 
 ## 1. 모델과 API 분리
 

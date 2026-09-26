@@ -1,4 +1,4 @@
-"""Model selection and pre-dispatch contracts; no provider transport is bundled."""
+"""Model selection and pre-dispatch contracts shared by evaluation and sessions."""
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -118,8 +118,8 @@ T = TypeVar("T")
 class DispatchGuard:
     """Call an injected trusted adapter only after resolving and checking policy.
 
-    This is not the later task approval engine or OS/network sandbox. The current
-    evaluation supplies a local recording adapter, never an HTTP implementation.
+    This is not the task approval engine or OS/network sandbox. Offline evaluation
+    supplies a local recording adapter; real generation uses ModelSessions.
     """
 
     def __init__(self, router: ModelRouter, adapters: Mapping[str, Callable[[ResolvedModel], T]]):

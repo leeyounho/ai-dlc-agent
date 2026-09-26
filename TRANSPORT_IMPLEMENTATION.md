@@ -1,6 +1,8 @@
 # 서비스 설정·HTTP transport 구현 계약
 
-현재 구현은 service schema 1을 connection/repository 설정과 함께 로드하고, GitHub 및 LLM adapter가 공통으로 사용할 HTTPS transport 경계를 제공한다. GitHub App/API adapter는 이 경계를 사용하도록 연결했지만 실제 GHES 계약 시험은 아직 하지 않았고, 모델 protocol adapter도 연결하지 않았다. 이 문서는 실제 GHES·LLM 통합 성공을 주장하지 않는다.
+현재 구현은 service schema 1을 connection/repository 설정과 함께 로드하고, GitHub 및 LLM adapter가 공통으로 사용할 HTTPS transport 경계를 제공한다. GitHub App/API 및 Chat Completions/Responses adapter를 이 경계에 연결했다. 실제 GHES·LLM 계약 시험은 아직 하지 않았다. [모델 구현 계약](MODEL_IMPLEMENTATION.md)에 프로토콜·세션 검증 범위를 기록했다.
+
+호출자는 선택적으로 deadline과 cancellation event를 전달할 수 있다. 연결된 TLS socket은 watcher가 마감 시간/취소 시 shutdown하며 HTTP header/body 대기도 중단한다. 동기 OS DNS와 TCP connect는 즉시 취소를 보장하지 않고, TCP connect는 남은 시간과 설정 timeout 중 작은 값으로 제한한다. 로컬 중단은 원격 작업 취소 확인이 아니며 결과가 불명확한 쓰기는 재실행하지 않는다.
 
 ## 1. 서비스 설정과 readiness
 
