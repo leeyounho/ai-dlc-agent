@@ -40,6 +40,8 @@ class ModelSessions:
                 require(all(type(run.get("schema_version")) is int and run["schema_version"] == 1
                             for run in runs.values()), "MODEL_STATE_VERSION")
                 change(runs)
+                if "state_revision" in state:
+                    state["state_revision"] = len(history) + 1
                 return state
 
             result = self.store.commit(key, expected_revision=len(history), event_id="model-" + uuid.uuid4().hex,

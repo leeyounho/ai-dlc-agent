@@ -3,13 +3,13 @@
 관련 Issue: #8. Chat Completions/Responses 프로토콜, 설치 코드의 custom adapter 등록,
 파일 저널 기반 세션·호출·도구 claim을 구현했다. 합성 응답과 로컬 TLS 서버에서 검증했으며
 실제 사내 Gemma4/gpt-oss/DeepSeek/Gauss 또는 외부 모델에 호출하지 않았다.
-승인·파일·runner 도구를 자동 연결하는 작업은 #9다.
+승인·파일·runner 도구 연결은 #9의 [AgentLoop](AGENT_IMPLEMENTATION.md)에 구현했다.
 
 ## 호출 경로
 
 `build_model_components(bundle, store)`는 네트워크 없이 Router, AdapterRegistry,
 공유 ModelConcurrency, ModelSessions를 구성한다. 서비스당 이 구성 한 개를 공유한다.
-`serve`도 이 구성을 생성하지만 #9의 실행 loop가 연결될 때까지 readiness에
+`serve`도 이 구성을 생성하지만 설치된 task workspace/runner/driver가 없는 기본 composition은 readiness에
 `MODEL_WORKFLOW_UNCONNECTED`를 유지한다. adapter 설치를 업무 수행 준비 완료로 해석하지 않는다.
 
 호출자는 기존 task의 FileJournal에서 `create_run` → `open_session` → `generate`를 사용한다.
@@ -97,3 +97,8 @@ process 중단과 재시작·중복 전달을 검증한다. 기존 transport 및
 [Chat Completions 생성](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
 이 문서는 호환 프로토콜 구현 근거이며 사내 provider 호환성이나 실제 모델 업무 품질의 증거가 아니다.
 실제 API/GHES/RHEL/Java/Maven·업무 평가 및 운영 배포는 수행하지 않았다.
+
+승인·모델·파일 도구·실제 검증을 연결한 호출자는 [AgentLoop](AGENT_IMPLEMENTATION.md)다.
+모델 journal mutation도 workflow state_revision을 갱신하여 같은 task의 사람 승인과
+실행 CAS가 이어진다. 임의 도구/승인/명령은 제공하지 않으며 purpose 변경에는 최신
+요구사항·설계·diff·실제 검증 checkpoint만 전달한다.

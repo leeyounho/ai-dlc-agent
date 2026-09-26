@@ -71,6 +71,23 @@ class WorkspaceTools:
         self._guard = threading.RLock()
         self._command_active = False
 
+    @classmethod
+    def reopen(cls, workspace: Workspace, *, denied_patterns=DEFAULT_DENIED_PATTERNS):
+        """Observe an edited tree against a trusted original manifest after restart.
+
+        This does not authorize resuming an interrupted patch. The controller must
+        reconcile its durable tool intent; this reader only permits retaining the
+        bounded current diff instead of requiring the edited tree to equal base.
+        """
+        tools = cls.__new__(cls)
+        tools.workspace = workspace
+        tools.denied_patterns = tuple(denied_patterns)
+        tools._base = {file.path: file for file in workspace.files}
+        tools._guard = threading.RLock()
+        tools._command_active = False
+        tools.state()
+        return tools
+
     def _path(self, value):
         path = relative_path(value)
         if denied_path(path, self.denied_patterns):

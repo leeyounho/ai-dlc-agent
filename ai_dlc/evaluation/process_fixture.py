@@ -37,13 +37,14 @@ else:
         raise SystemExit(7)
     if mode != "missing":
         Path("reports").mkdir(exist_ok=True)
+        failed = mode == "failure" or (mode == "source_assertion" and Path("input.txt").read_text(encoding="utf-8") != "fixed\n")
         cases = "" if mode == "zero" else '<testcase name="synthetic">' + (
-            '<failure message="fixture failure"/>' if mode == "failure" else
+            '<failure message="fixture failure"/>' if failed else
             '<skipped/>' if mode == "skipped" else '') + '</testcase>'
         Path("reports/result.xml").write_text('<testsuite>' + cases + '</testsuite>', encoding="utf-8")
     print("Synthetic command finished.")
 '''
-MODES = frozenset({"pass", "failure", "zero", "skipped", "missing", "nonzero", "mutate", "timeout", "output_limit", "unexpected_file"})
+MODES = frozenset({"pass", "failure", "source_assertion", "zero", "skipped", "missing", "nonzero", "mutate", "timeout", "output_limit", "unexpected_file"})
 
 
 class _StreamDigest:

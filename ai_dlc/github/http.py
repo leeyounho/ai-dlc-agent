@@ -2,7 +2,7 @@
 
 import json
 import re
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from ..errors import AgentError
 from ..transport import HttpRequest, HttpTransport
@@ -19,14 +19,17 @@ class GitHubHttp:
         self.api_version = api_version
 
     def request_json(self, method: str, path: str, *, authorization: str, body: dict | None = None,
-                     not_found: bool = False, response_type: str = "object"):
+                     not_found: bool = False, response_type: str = "object", page: int | None = None):
         if response_type not in {"object", "array"}:
             raise AgentError("GITHUB_REQUEST", "GitHub response type is invalid.")
         if (type(path) is not str or not path.startswith("/") or not path.isascii()
                 or "\\" in path or "?" in path or "#" in path or not re.fullmatch(r"/[A-Za-z0-9_./%~-]+", path)):
             raise AgentError("GITHUB_REQUEST", "GitHub API path is invalid.")
         base_path = self._base.path.rstrip("/")
-        url = urlunsplit((self._base.scheme, self._base.netloc, base_path + path, "", ""))
+        if page is not None and (method != "GET" or type(page) is not int or not 1 <= page <= 100):
+            raise AgentError("GITHUB_REQUEST", "Pagination is restricted to bounded read requests.")
+        query = urlencode({"per_page": 100, "page": page}) if page is not None else ""
+        url = urlunsplit((self._base.scheme, self._base.netloc, base_path + path, query, ""))
         headers = {"Accept": "application/vnd.github+json", "Authorization": authorization,
                    "User-Agent": "ai-dlc-agent"}
         if self.api_version is not None:

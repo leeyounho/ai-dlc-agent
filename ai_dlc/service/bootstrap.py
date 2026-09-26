@@ -40,7 +40,8 @@ def build_model_components(bundle, store, *, custom=None) -> ModelComponents:
     concurrency = ModelConcurrency(bundle.service.execution.model_concurrency,
                                    {p.id: p.max_concurrent_requests for p in bundle.connection.providers.values()})
     sessions = ModelSessions(store, ModelRouter(ModelRegistry(bundle.connection)), adapters, concurrency)
-    # Adapter readiness is not evidence that the approval-to-tool loop (#9) exists.
+    # The CLI has no installer-provisioned per-task workspace/AgentDriver yet.
+    # Adapter availability alone must not advertise autonomous intake readiness.
     return ModelComponents(sessions, adapters.keys, ("MODEL_WORKFLOW_UNCONNECTED",))
 
 
