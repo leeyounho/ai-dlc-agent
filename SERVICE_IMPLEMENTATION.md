@@ -5,6 +5,11 @@ process. The same file is accepted through `--service` for consistency with
 `validate-service`. `--once` acquires ownership, replays durable state, processes
 one inbox/scheduler cycle, checkpoints, and exits without opening a socket.
 
+The bootstrap also constructs the model protocol registry and shared session
+concurrency controller without making model calls. Until the approval/tool loop
+in issue #9 is connected, `MODEL_WORKFLOW_UNCONNECTED` keeps readiness false even
+when a protocol adapter is installed. See [model contracts](MODEL_IMPLEMENTATION.md).
+
 ## Lifecycle and recovery
 
 The service acquires the existing `FileJournal` instance lock before recovery or

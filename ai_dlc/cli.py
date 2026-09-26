@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "serve":
-            from .service.bootstrap import build_github_components, build_runner_components
+            from .service.bootstrap import build_github_components, build_model_components, build_runner_components
             from .service.http_server import ServiceHttpServer
             from .service.runtime import ServiceRuntime
             from .storage import FileJournal
@@ -88,10 +88,12 @@ def main(argv: list[str] | None = None) -> int:
             with FileJournal(state_root) as store:
                 components = build_github_components(bundle, store, environment=environment)
                 runner = build_runner_components(bundle)
+                models = build_model_components(bundle, store)
                 runtime = ServiceRuntime(bundle, store, processor=components.processor,
                                          environment=environment,
-                                         startup_reasons=(*components.reasons, *runner.reasons),
-                                         runner_available=runner.runner is not None)
+                                         startup_reasons=(*components.reasons, *runner.reasons, *models.reasons),
+                                         runner_available=runner.runner is not None,
+                                         model_adapters=models.adapter_keys)
                 runtime.start()
                 if args.once:
                     try:

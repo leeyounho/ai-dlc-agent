@@ -8,6 +8,7 @@ from ..github import (GitHubApiClient, GitHubAppAuthenticator, GitHubEventProces
                       GitHubWebhookEndpoint, GitHubWebhookReceiver, RepositoryBinding,
                       WebhookInbox)
 from ..github.http import GitHubHttp
+from ..models import AdapterRegistry, ModelConcurrency, ModelRegistry, ModelRouter, ModelSessions
 from ..transport import HttpTransport
 
 
@@ -23,6 +24,24 @@ class RunnerComponents:
     runner: InstalledRunner | None
     installation_digest: str | None
     reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ModelComponents:
+    sessions: ModelSessions
+    adapter_keys: frozenset[str]
+    reasons: tuple[str, ...]
+
+
+def build_model_components(bundle, store, *, custom=None) -> ModelComponents:
+    """Construct shared model runtime without credentials, imports or network I/O."""
+    transport = HttpTransport(bundle.connection.network, bundle.service.transport)
+    adapters = AdapterRegistry(transport, custom=custom)
+    concurrency = ModelConcurrency(bundle.service.execution.model_concurrency,
+                                   {p.id: p.max_concurrent_requests for p in bundle.connection.providers.values()})
+    sessions = ModelSessions(store, ModelRouter(ModelRegistry(bundle.connection)), adapters, concurrency)
+    # Adapter readiness is not evidence that the approval-to-tool loop (#9) exists.
+    return ModelComponents(sessions, adapters.keys, ("MODEL_WORKFLOW_UNCONNECTED",))
 
 
 def build_runner_components(bundle) -> RunnerComponents:
