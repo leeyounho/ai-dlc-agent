@@ -6,8 +6,8 @@ process. The same file is accepted through `--service` for consistency with
 one inbox/scheduler cycle, checkpoints, and exits without opening a socket.
 
 The bootstrap also constructs the model protocol registry and shared session
-concurrency controller without making model calls. Until the approval/tool loop
-in issue #9 is connected, `MODEL_WORKFLOW_UNCONNECTED` keeps readiness false even
+concurrency controller without making model calls. Until per-task source and
+AgentDriver provisioning is connected, `MODEL_WORKFLOW_UNCONNECTED` keeps readiness false even
 when a protocol adapter is installed. See [model contracts](MODEL_IMPLEMENTATION.md).
 
 ## Lifecycle and recovery
@@ -53,3 +53,14 @@ and key and requires TLS 1.2 or newer.
 
 No database, container, worker daemon, or message broker is introduced. The
 operator-owned state directory remains the durable source of truth.
+
+## Prepared implementation tasks
+
+`ServiceRuntime(..., agent_driver=driver)` also schedules registered AgentLoop
+steps. Human waits are revision-sensitive and do not consume active model time.
+An interrupted step is recovered before intake, with command effects reobserved
+once and the current diff checkpointed; no file patch or model request is replayed.
+Missing task runtimes produce `AGENT_TASK_RUNTIME_UNAVAILABLE`. Default CLI
+composition still lacks automatic task source provisioning, so its existing
+`MODEL_WORKFLOW_UNCONNECTED` readiness reason remains. See
+[Agent implementation](AGENT_IMPLEMENTATION.md) for registration and boundaries.

@@ -163,6 +163,27 @@ class ServiceRuntimeTests(unittest.TestCase):
                 self.assertEqual(status["recovery_required"][0]["task"], key.as_dict())
                 runtime.shutdown(grace_seconds=0)
 
+    def test_agent_recovery_does_not_reobserve_same_uncertain_command_twice(self):
+        with temporary_directory() as temp:
+            bundle = self.bundle(temp / "state")
+            key = TaskKey(bundle.service.github.instance_id, 1, 8)
+            calls = []
+            class Driver:
+                def recover(self, task, state):
+                    calls.append(task)
+                    return {"status": "blocked", "reason": "AGENT_RECOVERY_REQUIRED", "diff": {"private": "source"}}
+            with FileJournal(bundle.connection.directories["state"]) as store:
+                store.commit(key, expected_revision=0, event_id="active", event={"kind": "test"},
+                             reduce=lambda _old: {"agent": {"in_progress": {"stage": "verification"}},
+                                                 "execution": {"status": "uncertain"}})
+                runtime = ServiceRuntime(bundle, store, agent_driver=Driver(),
+                                         recovery=lambda *args: self.fail("Command already reobserved"))
+                status = runtime.start()
+                self.assertEqual(calls, [key])
+                self.assertEqual(len(status["recovery_required"]), 1)
+                self.assertNotIn("diff", status["recovery_required"][0])
+                runtime.shutdown(grace_seconds=0)
+
     def test_checkpoint_failure_closes_dispatch_and_never_claims_ready(self):
         with temporary_directory() as temp:
             bundle = self.bundle(temp / "state")

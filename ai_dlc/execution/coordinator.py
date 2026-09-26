@@ -1,6 +1,7 @@
 """Commit-before-dispatch command execution with conservative crash recovery."""
 
 from copy import deepcopy
+from dataclasses import replace
 import re
 import time
 
@@ -150,7 +151,7 @@ class ExecutionCoordinator:
             self.store.assert_healthy()
             return commit.state["execution"]
 
-    def execute(self, key: TaskKey, run_id: str, plan: ExecutionPlan | None = None) -> dict:
+    def execute(self, key: TaskKey, run_id: str, plan: ExecutionPlan | None = None, *, cancellation=None) -> dict:
         """Execute one durable reservation; never infer absence from timeout."""
         handle = None
         plan = plan or self.load_plan(key, run_id)
@@ -167,6 +168,8 @@ class ExecutionCoordinator:
             if state.get("execution", {}).get("run_id") != run_id:
                 raise AgentError("RUN_CONFLICT", "Another command occupies this task.")
             try:
+                if cancellation is not None and cancellation.is_set():
+                    raise AgentError("RUN_CANCELLED", "Execution was cancelled before dispatch.")
                 self._basis(key, state, previous)
                 if self.runner.preflight(plan) != previous["runtime_digest"]:
                     raise AgentError("RUNTIME_CHANGED", "Runtime changed after execution planning.")
@@ -207,8 +210,15 @@ class ExecutionCoordinator:
             while True:
                 result = handle.poll()
                 if result is not None:
+                    if cancellation is not None and cancellation.is_set():
+                        # An external caller's cancellation cannot become success
+                        # just because the process completed before the next poll.
+                        if result.termination == "completed":
+                            result = replace(result, termination="cancelled")
                     return self._finish(key, run_id, plan, result, reason=reason)
                 if cancelled_at is None:
+                    if cancellation is not None and cancellation.is_set():
+                        reason = "RUN_CANCELLED"
                     try:
                         with self.store.locked(key):
                             self.store.assert_healthy()

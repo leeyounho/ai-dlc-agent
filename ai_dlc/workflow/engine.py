@@ -32,11 +32,14 @@ def _text(value, field, *, empty=False):
 def _document(raw, *, design=False):
     fields = {"summary", "changes", "validation_plan", "open_questions"} if design else {
         "summary", "scope", "acceptance_criteria", "open_questions"}
-    v.obj(raw, "document", fields)
+    v.obj(raw, "document", fields, set() if design else {"split_proposals"})
     _text(raw["summary"], "summary")
     for field in fields - {"summary"}:
         for item in v.array(raw[field], field, nonempty=field != "open_questions"):
             _text(item, field)
+    if "split_proposals" in raw:
+        for item in v.array(raw["split_proposals"], "split_proposals"):
+            _text(item, "split_proposals")
 
 
 def _settle(state):
@@ -117,8 +120,16 @@ class WorkflowEngine:
         observation = self._issue(key)
         if not observation.open:
             raise AgentError("ISSUE_CLOSED", "The Issue is closed; no new work may start.")
-        if v.canonical_digest(observation.document()) != state["source_digest"]:
+        if not self._same_source(key, state["source_digest"], observation.document()):
             raise AgentError("SOURCE_CHANGED", "Issue source changed; preserve and normalize the new revision first.")
+
+    def _same_source(self, key, digest, observed):
+        # GitHub's issue updated_at also changes on status comments/labels.
+        # Preserve every raw observation, but only source-content changes revoke
+        # approval; otherwise the Agent's own status comment invalidates its gate.
+        previous = self.store.blob(key, digest)
+        return ({k: value for k, value in previous.items() if k != "version"}
+                == {k: value for k, value in observed.items() if k != "version"})
 
     def _comment(self, key, comment_id):
         v.integer(comment_id, "comment_id")
@@ -194,12 +205,14 @@ class WorkflowEngine:
                 _reset_scope(state)
             else:
                 self._state(state)
-                if digest != state["source_digest"]:
+                if not self._same_source(key, state["source_digest"], blob):
                     _reset_scope(state)
                     state["amendments"] = []
-            if digest != state["source_digest"] or state["source_revision"] == 0:
+            changed = state["source_revision"] == 0 or not self._same_source(key, state["source_digest"], blob)
+            if changed:
                 state["source_revision"] += 1
-            state["source_digest"] = digest
+                state["source_digest"] = digest
+            state["source_observation_digest"] = digest
             if not observation.open:
                 state["cancel_requested"] = active_execution(state)
                 state["cancelled"] = not active_execution(state)
@@ -379,3 +392,25 @@ class WorkflowEngine:
             self._basis(key, state, design=True)
             return GateCheck(state["state_revision"], state["cancellation_epoch"],
                              state["requirements"]["revision"], state["design"]["revision"], state["config_digest"])
+
+    def prepare_repair(self, key: TaskKey, run_id: str, *, expected_revision: int, event_id: str):
+        """Release a confirmed failed test attempt for a bounded, approved repair.
+
+        The old execution and evidence remain immutable in the journal. Unknown,
+        stale, mutated-source, interrupted and unverified processes cannot enter
+        this path. The agent coordinator separately enforces repair budgets.
+        """
+        def reduce(state):
+            self._state(state)
+            self._basis(key, state, design=True)
+            execution = state.get("execution") or {}
+            if (state["paused"] or execution.get("run_id") != run_id
+                    or execution.get("status") != "failed"
+                    or execution.get("epoch") != state["cancellation_epoch"]
+                    or execution.get("reason") not in {"COMMAND_EXIT", "JUNIT_FAILED_OR_EMPTY"}
+                    or not (execution.get("result") or {}).get("process_tree_stopped")):
+                raise AgentError("REPAIR_DENIED", "Only a confirmed test failure can enter approved repair.")
+            state["execution"] = None
+            return state
+        return self._commit(key, expected_revision, event_id,
+                            {"kind": "repair_requested", "execution_run_id": run_id}, reduce)

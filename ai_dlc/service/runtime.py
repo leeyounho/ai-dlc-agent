@@ -28,13 +28,14 @@ class ServiceRuntime:
     def __init__(self, bundle, store, *, processor=None, recovery=None,
                  scheduler: FairScheduler | None = None, environment=None,
                  startup_reasons=(), runner_available=False, model_adapters=(),
-                 clock=time.monotonic):
+                 clock=time.monotonic, agent_driver=None):
         self.bundle, self.store = bundle, store
         self.processor, self.recovery = processor, recovery
         self.environment = dict(os.environ if environment is None else environment)
         self.startup_reasons = tuple(startup_reasons)
         self.runner_available = bool(runner_available)
         self.model_adapters = frozenset(model_adapters)
+        self.agent_driver = agent_driver
         self.clock = clock
         execution = bundle.service.execution
         provider_limits = {provider.id: provider.max_concurrent_requests
@@ -99,7 +100,16 @@ class ServiceRuntime:
                 for key in keys:
                     state = self.store.recover(key)
                     self._recovered_tasks += 1
-                    if state is not None and active_execution(state):
+                    agent_recovered = False
+                    if state is not None and (state.get("agent") or {}).get("in_progress"):
+                        result = (self.agent_driver.recover(key, state) if self.agent_driver else
+                                  {"status": "blocked", "reason": "AGENT_TASK_RUNTIME_UNAVAILABLE"})
+                        if result and result.get("status") == "blocked":
+                            self._recovery_required.append({"task": key.as_dict(), "status": "blocked",
+                                                            "reason": result["reason"]})
+                            agent_recovered = result["reason"] != "AGENT_TASK_RUNTIME_UNAVAILABLE"
+                        state = self.store.read(key)
+                    if state is not None and active_execution(state) and not agent_recovered:
                         if self.recovery is None:
                             self._recovery_required.append({
                                 "task": key.as_dict(), "reason": "EXECUTION_REOBSERVATION_REQUIRED",
@@ -145,6 +155,8 @@ class ServiceRuntime:
                 raise AgentError("SERVICE_NOT_RUNNING", "Service runtime is not accepting a processing cycle.")
             try:
                 scheduled = self._schedule_inbox()
+                if self.agent_driver is not None:
+                    scheduled += self.agent_driver.schedule(self.scheduler)
                 dispatched = self.scheduler.tick()
                 snapshot = self.scheduler.snapshot()
                 critical = {"STATE_IO", "STATE_UNHEALTHY", "INBOX_IO", "INBOX_CORRUPT"}
