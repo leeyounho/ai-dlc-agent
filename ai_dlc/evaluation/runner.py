@@ -14,6 +14,7 @@ from ..config.network import authorize_url
 from ..errors import AgentError
 from ..models.router import DispatchGuard, ModelRegistry, ModelRouter
 from .offline import OfflineNetworkGuard
+from .environment import collect_environment, compare_environments, report_environment
 
 OPERATIONS = {"validate", "resolve", "preflight", "dispatch", "authorize_destination"}
 
@@ -208,6 +209,7 @@ def source_digest() -> str:
 
 
 def run_suite(suite: dict) -> dict:
+    environment = collect_environment()
     results = []
     for case in suite["cases"]:
         try:
@@ -217,7 +219,7 @@ def run_suite(suite: dict) -> dict:
                             "expected": case["expected"], "actual": {"outcome": "harness_error", "code": error.code},
                             "intercepted_network_attempts": 0})
     passed = sum(row["status"] == "pass" for row in results)
-    return {"schema_version": 1, "evaluation_type": "local_contract",
+    return {"schema_version": 2, "evaluation_type": "local_contract", "runtime_environment": environment,
             "evaluation_id": "eval-" + uuid.uuid4().hex,
             "created_at": datetime.now(timezone.utc).isoformat(), "agent_version": __version__,
             "source_digest": source_digest(), "suite_id": suite["suite_id"], "suite_digest": suite["digest"],
@@ -231,12 +233,16 @@ def run_suite(suite: dict) -> dict:
 
 
 def render_report(report: dict) -> str:
+    environment = report_environment(report)
     lines = ["# 로컬 설정·모델 선택 평가", "", f"평가 ID: {report['evaluation_id']}",
              f"결과: {report['status']} · {report['counts']['passed']}/{report['counts']['total']} 통과", "",
              "이 결과는 로컬 계약 검증입니다. 실제 LLM 성능이나 운영 도입 적합성을 평가하지 않았습니다.", "",
              f"Python 네트워크 호출 차단 기록: {report['intercepted_network_attempts']}건", "",
              f"코드 digest: `{report['source_digest']}`", f"평가 세트 digest: `{report['suite_digest']}`", "",
-             "| 사례 | 동작 | 판정 |", "| --- | --- | --- |"]
+             "## 실행 환경", "", "| 항목 | 실행 당시 값 |", "| --- | --- |"]
+    lines.extend(f"| {field} | {value if value is not None else 'unknown'} |" for field, value in environment.items())
+    lines += ["", "환경 값의 일치는 성능 우열이나 전체 실행 조건의 동일성을 입증하지 않습니다.", "",
+              "| 사례 | 동작 | 판정 |", "| --- | --- | --- |"]
     for row in report["cases"]:
         lines.append(f"| {row['case_id']} | {row['operation']} | {row['status']} |")
     failed = [row for row in report["cases"] if row["status"] != "pass"]
@@ -247,6 +253,7 @@ def render_report(report: dict) -> str:
 
 
 def save_report(report: dict, results_root: Path) -> Path:
+    report_environment(report)
     results_root = v.local_path(results_root)
     v.identifier(report["evaluation_id"], "report.evaluation_id")
     staging = results_root / (".pending-" + uuid.uuid4().hex)
@@ -277,9 +284,11 @@ def read_report(path: Path) -> dict:
     if path.is_dir():
         path = path / "report.json"
     result = v.read_json(path)
+    # Read legacy documents without rewriting them or sampling this machine.
+    report_environment(result)
     v.obj(result, "report", {"schema_version", "evaluation_type", "evaluation_id", "created_at", "agent_version", "source_digest",
-          "suite_id", "suite_digest", "status", "counts", "intercepted_network_attempts", "eligible_for_release", "not_evaluated", "cases"})
-    v.version(result["schema_version"], 1)
+          "suite_id", "suite_digest", "status", "counts", "intercepted_network_attempts", "eligible_for_release", "not_evaluated", "cases"}
+          | ({"runtime_environment"} if result["schema_version"] == 2 else set()))
     v.enum(result["evaluation_type"], {"local_contract"}, "report.evaluation_type")
     if result["eligible_for_release"] is not False:
         raise AgentError("EVAL_REPORT_INVALID", "Local contract reports cannot certify a release.")
@@ -315,6 +324,7 @@ def compare_reports(baseline: dict, candidate: dict) -> dict:
     if a.keys() != b.keys() or any(a[k]["expected"] != b[k]["expected"] for k in a):
         raise AgentError("EVAL_SUITE_MISMATCH", "Report expectations do not match.")
     return {"evaluation_type": "local_contract", "baseline": baseline["evaluation_id"], "candidate": candidate["evaluation_id"],
+            "environment": compare_environments(baseline, candidate),
             "regressions": sorted(k for k in a if a[k]["status"] == "pass" and b[k]["status"] == "fail"),
             "improvements": sorted(k for k in a if a[k]["status"] == "fail" and b[k]["status"] == "pass"),
             "eligible_for_release": False}
