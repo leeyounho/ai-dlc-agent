@@ -49,6 +49,8 @@ python -m ai_dlc eval compare --baseline <previous-report-directory> --candidate
 
 비교는 같은 평가 세트·fixture·기대 결과에 대해서만 수행합니다. 결과 집계와 사례별 판정의 불일치를 검사하지만 파일의 암호학적 서명/공증 기능은 아닙니다. 로컬 계약 평가에는 언제나 `eligible_for_release=false`를 기록합니다. 33개 사례의 통과는 실제 LLM 업무 성공률이나 운영 적합성 평가를 대신하지 않습니다.
 
+새 보고서 schema 2는 Python 구현체/정확한 버전, OS 계열/release, machine architecture만 기록합니다. 구버전 schema 1은 원문 그대로 읽고 환경을 unknown으로 표시하며 현재 머신으로 추정하지 않습니다. `eval compare`는 환경의 same/different/unknown과 차이·미확인 필드를 추가로 출력합니다. 환경 일치로 성능 우열을 판정하지 않습니다. [필드·호환성·수집 경계](EVALUATION_ENVIRONMENT.md)를 참고합니다.
+
 종료 코드: 0 성공, 1 평가 실패/회귀 발견, 2 잘못된 입력·로컬 오류, 3 모델 호출 전 조건 미충족(`--require-ready`), 130 사용자 중단.
 
 ## 구현 구조와 경계
