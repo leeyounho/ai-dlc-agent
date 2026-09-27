@@ -22,6 +22,7 @@ def _safe(text):
 def render_status(store, key):
     state = store.read(key)
     agent = state.get("agent") or {}
+    publication = state.get("publication") or {}
     req, design = state["requirements"], state["design"]
     if state["cancelled"] or state.get("cancel_requested"):
         action = "취소된 작업입니다. 미확정 실행 효과를 확인하세요."
@@ -29,6 +30,10 @@ def render_status(store, key):
         action = "운영자: /aidlc resume"
     elif agent.get("status") == "blocked":
         action = "운영자: 실패 근거·현재 diff·미완료 효과를 확인하세요. 자동 예산 초기화/재실행은 하지 않습니다."
+    elif publication.get("status") == "published":
+        action = "PR 검토자: 최종 문서와 정확한 head의 근거를 검토하세요. merge/deploy 승인은 별도입니다."
+    elif publication.get("status") == "blocked":
+        action = "게시 담당: 원격 효과·사람 변경·승인 무효화 근거를 확인하고 재검증하세요."
     elif req is None:
         action = "Agent: 원문과 변경 요청을 보존하고 요구사항을 정리합니다."
     elif req["has_open_questions"]:
@@ -55,6 +60,9 @@ def render_status(store, key):
              f"| 원문 근거 | Issue #{key.issue_number} · source digest {_safe(state['source_digest'])} |",
              f"| 원문 보존 | original digest {_safe(state['original_source_digest'])} |",
              f"| 코드 근거 | {_safe((agent.get('diff') or {}).get('workspace_digest', '미확인'))} |", ""]
+    if publication:
+        lines += [f"게시 상태: {_safe(publication['status'])} · {_safe(publication.get('reason') or '없음')}",
+                  "PR: " + _safe((publication.get("pull") or {}).get("url", "미확정")), ""]
     for label, document in (("요구사항", req), ("설계", design)):
         if document:
             content = store.blob(key, document["digest"])

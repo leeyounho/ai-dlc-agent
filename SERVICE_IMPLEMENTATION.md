@@ -64,3 +64,10 @@ Missing task runtimes produce `AGENT_TASK_RUNTIME_UNAVAILABLE`. Default CLI
 composition still lacks automatic task source provisioning, so its existing
 `MODEL_WORKFLOW_UNCONNECTED` readiness reason remains. See
 [Agent implementation](AGENT_IMPLEMENTATION.md) for registration and boundaries.
+
+`publication_driver=PublicationDriver(...)` schedules registered verified tasks
+and polls their current remote PR/ref/check state at a bounded interval. Pending
+intents are reconciled, never blindly reissued. Recovery without a registered
+publisher reports `PUBLISH_RUNTIME_UNAVAILABLE`. See
+[publication contracts](PUBLISHING_IMPLEMENTATION.md). No merge/deploy authority
+or installer-specific HTTPS Git credentials are inferred from registration.

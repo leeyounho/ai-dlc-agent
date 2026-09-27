@@ -19,7 +19,8 @@ class GitHubHttp:
         self.api_version = api_version
 
     def request_json(self, method: str, path: str, *, authorization: str, body: dict | None = None,
-                     not_found: bool = False, response_type: str = "object", page: int | None = None):
+                     not_found: bool = False, response_type: str = "object", page: int | None = None,
+                     state: str | None = None):
         if response_type not in {"object", "array"}:
             raise AgentError("GITHUB_REQUEST", "GitHub response type is invalid.")
         if (type(path) is not str or not path.startswith("/") or not path.isascii()
@@ -28,7 +29,12 @@ class GitHubHttp:
         base_path = self._base.path.rstrip("/")
         if page is not None and (method != "GET" or type(page) is not int or not 1 <= page <= 100):
             raise AgentError("GITHUB_REQUEST", "Pagination is restricted to bounded read requests.")
-        query = urlencode({"per_page": 100, "page": page}) if page is not None else ""
+        if state is not None and (method != "GET" or state not in {"open", "closed", "all"}):
+            raise AgentError("GITHUB_REQUEST", "State filtering is restricted to read requests.")
+        params = {"per_page": 100, "page": page} if page is not None else {}
+        if state is not None:
+            params["state"] = state
+        query = urlencode(params)
         url = urlunsplit((self._base.scheme, self._base.netloc, base_path + path, query, ""))
         headers = {"Accept": "application/vnd.github+json", "Authorization": authorization,
                    "User-Agent": "ai-dlc-agent"}
