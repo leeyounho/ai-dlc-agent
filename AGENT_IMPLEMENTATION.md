@@ -37,8 +37,9 @@ driver.register(key, loop)
 거부한다. 모델 동시성은 공용 ModelSessions의 global/provider 한도로 제한한다.
 사람 대기는 실행 예산을 소비하지 않고 같은 관측 revision에서 재호출하지 않는다.
 
-기본 `serve` CLI의 자동 source checkout/task runtime 설치와 branch/PR 게시 연결은
-#10 범위다. 기본 composition은 여전히 `MODEL_WORKFLOW_UNCONNECTED`를 반환한다.
+branch/PR 게시 연결은 #10의 [PublicationCoordinator](PUBLISHING_IMPLEMENTATION.md)에 구현했다.
+기본 `serve` CLI의 설치자별 source checkout/task runtime 자동 구성은 아직 없으며,
+기본 composition은 여전히 `MODEL_WORKFLOW_UNCONNECTED`를 반환한다.
 이유는 loop 미구현이 아니라 설치된 task workspace/runner/driver가 없기 때문이다.
 새 loop를 이유로 기본 CLI가 운영 ready를 선언하지 않는다.
 
@@ -93,7 +94,7 @@ Bot identity와 repository scope를 확인하고 사람이 수정한 본문은 �
 최대 100페이지를 조회하며 불완전한 scan에서는 게시를 차단한다. GitHub PATCH에는
 원자적 body compare-and-set이 없으므로 재관측과 PATCH 사이의 수정 경쟁은 남는다.
 기본 scheduler는 ready_for_pr 작업을 계속 polling하지 않는다. 게시자는 게시 직전
-`loop.step`의 현재 gate/digest 검사를 거쳐야 하며 #10에서 Git head까지 묶는다.
+현재 gate/digest 검사를 거쳐야 하며 PublicationCoordinator가 Git head까지 묶는다.
 
 ## 검증 범위
 

@@ -51,5 +51,5 @@ as successful completion.
 - HTTPS fetching still relies on the host's separately enforced DNS/egress and
   CA policy; this change includes only local bare-repository integration tests.
 - The LFS loader is a trusted port, not a bundled network client.
-- Branch publication and PR creation belong to Issue #10.
+- Branch publication and PR creation are implemented in [the publisher](PUBLISHING_IMPLEMENTATION.md), with an installed HTTPS network adapter required for live Git.
 - Live hostile process containment belongs to the RHEL runner in Issue #7.

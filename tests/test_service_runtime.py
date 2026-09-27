@@ -163,6 +163,19 @@ class ServiceRuntimeTests(unittest.TestCase):
                 self.assertEqual(status["recovery_required"][0]["task"], key.as_dict())
                 runtime.shutdown(grace_seconds=0)
 
+    def test_publication_without_registered_runtime_requires_recovery_action(self):
+        with temporary_directory() as temp:
+            bundle = self.bundle(temp / "state")
+            key = TaskKey(bundle.service.github.instance_id, 1, 8)
+            with FileJournal(bundle.connection.directories["state"]) as store:
+                store.commit(key, expected_revision=0, event_id="pending", event={"kind": "test"},
+                             reduce=lambda _old: {"publication": {"stage": "pr_pending"}})
+                runtime = ServiceRuntime(bundle, store)
+                status = runtime.start()
+                self.assertEqual(status["recovery_required"][0]["reason"], "PUBLISH_RUNTIME_UNAVAILABLE")
+                self.assertFalse(status["health"]["ready"])
+                runtime.shutdown(grace_seconds=0)
+
     def test_agent_recovery_does_not_reobserve_same_uncertain_command_twice(self):
         with temporary_directory() as temp:
             bundle = self.bundle(temp / "state")

@@ -144,7 +144,7 @@ class AgentLoopTests(unittest.TestCase):
         call = ToolCall("patch-" + request.request_id, "apply_patch", json_text({
             "patch": "--- a/input.txt\n+++ b/input.txt\n@@ -1 +1 @@\n-broken\n+fixed\n",
             "workspace_digest": state.digest,
-            "expected_files": [{"path": "input.txt", "sha256": state.files[0].sha256}]}))
+            "expected_files": [{"path": "input.txt", "sha256": next(f.sha256 for f in state.files if f.path == "input.txt")}]}))
         return ModelResponse("", (call,), "tool_calls")
 
     def finish(self, *, patch=True):
